@@ -1,5 +1,6 @@
-# Quotes
+# L^3 - Quotes
 ## Famous, and not so famous, quotes I've always found worth remembering
+*[Home](./README.md) | Quotes | Something | Something else*
 
 ### Leadership
 
