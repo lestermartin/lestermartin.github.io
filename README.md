@@ -1,4 +1,5 @@
-# L^3 - Lester's life lessons
+# L^3 - Home
+## Lester's life lessons
 *Home | [Quotes](./quotes.md) | Something | Something else*
 
 ![alt text](https://raw.githubusercontent.com/lestermartin/lestermartin.github.io/main/L-Squared.png "website logo")
