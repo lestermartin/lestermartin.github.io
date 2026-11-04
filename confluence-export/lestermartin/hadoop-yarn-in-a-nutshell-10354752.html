@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hadoop yarn (in a nutshell)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>hadoop yarn (in a nutshell)</h1>
+<p class="meta">2013-06-27 &middot; Lester Martin</p>
+<p><span class="confluence-embedded-file-wrapper image-right-wrapper"><img class="confluence-embedded-image image-right" loading="lazy" src="images/Yarn.jpg" data-unresolved-comment-count="0" data-linked-resource-id="10518540" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="10354752" data-linked-resource-container-version="2" data-media-id="69e61ea8-3951-4932-a095-aa96a9da5eb7" data-media-type="file"></span></p><p>I was just explaining to a colleague today how Hadoop 2.0 (aka YARN, which stands for Yet Another Resource Negotiator) differs from Hadoop 1.0.  Today's &quot;core Hadoop&quot; consists of HDFS and MapReduce and each have their own master &amp; worker daemon processes.  Specifically, NameNode &amp; DataNode for HDFS and JobTracker &amp; TaskTracker for MapReduce.  This itself makes sense as HDFS and MapReduce are focused on two different things.</p><p>HDFS offers redundant, reliable storage while the tightly-coupled MapReduce framework concentrates on data processing and the cluster resource management that is needed for such a scalable platform.  This model works well when we only have applications that layer on top of MapReduce such as the open-source Pig &amp; Hive frameworks and the commercial offering from Datameer, but these tools will only perform as fast as the underlying batch-oriented MapReduce layer will allow.</p><p>There are other offerings that are bringing near real-time responsiveness to the Hadoop &quot;ecosystem&quot;.  One of the most established ones is HBase.  In projects like this one an entirely new set of daemons come into play to address the necessary data processing requirements as well as cluster resource management.  This model starts to become a nightmare on two fronts as more and more Hadoop tools &amp; frameworks become available.  </p><p>First, we have multiple teams (open source and commercial) building the same kinds of software to handle operating in a clustered environment which simply leads to way too many implementations of the same general problem.  Second, it isn't hard to imagine that we could quickly have a number of different sets of master &amp; worker daemons starting to run on all the machines in our cluster.  Hadoop 2.0 / YARN is here to help with both of these concerns.</p><p>YARN attacks the underlying resource management problem for all and features an interface that allows data processing frameworks to plug into this shared functionality.  MapReduce and HBase in Hadoop 2.0 will sit on top of YARN (w/o requiring app developers to rewrite anything).  As always, a picture is worth a thousand words and Hortonworks has presented a few in their <a class="external-link" href="http://hortonworks.com/hadoop/yarn/" rel="nofollow">Hadoop YARN write-up</a>.  In fact, their synopsis is even better than mine, but I thought I'd give it a try anyway.  <img class="emoticon emoticon-wink" data-emoji-id="1f609" data-emoji-shortname=":wink:" data-emoji-fallback="😉" src="images/wink.png" width="16" height="16" data-emoticon-name="wink" alt="(wink)" /></p><p>Hadoop 2.0 is coming fast and has a great opportunity to be the &quot;app fabric&quot; of tomorrow as a wise man recently predicted to me.  If you have an app or framework that needs to scale to the level of where Hadoop is going (i.e. thousands of nodes), then this is the time to see how you can unwind some of your own cluster management code and take advantage of YARN yourself. <em> If you need some help doing it -- drop me a line as that would be a fun project!!</em></p>
+</body>
+</html>

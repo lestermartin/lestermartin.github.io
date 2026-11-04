@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive Cheat Sheet</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>Hive Cheat Sheet</h1>
+<p class="meta">2014-01-18 &middot; Lester Martin</p>
+<h4 id="HiveCheatSheet-ORC">ORC</h4><ul><li><p>File dump utility; <a class="external-link" href="https://stackoverflow.com/questions/20847024/how-to-see-contents-of-hive-orc-files-in-linux" rel="nofollow">https://stackoverflow.com/questions/20847024/how-to-see-contents-of-hive-orc-files-in-linux</a></p><ul><li><p>switches; <a class="external-link" href="https://orc.apache.org/docs/java-tools.html" rel="nofollow">https://orc.apache.org/docs/java-tools.html</a></p></li></ul></li><li><p>HCC Q&amp;A: <a class="external-link" href="https://community.hortonworks.com/questions/173868/is-a-block-in-data-node-divided-into-multiple-stri.html" rel="nofollow">https://community.hortonworks.com/questions/173868/is-a-block-in-data-node-divided-into-multiple-stri.html</a></p></li><li><p>HCC Best Practices Article; <a class="external-link" href="https://community.hortonworks.com/articles/75501/orc-creation-best-practices.html" rel="nofollow">https://community.hortonworks.com/articles/75501/orc-creation-best-practices.html</a></p></li><li><p>Benchmarking; <a class="external-link" href="https://thisdataguy.com/2018/12/21/orc-benchmarking/" rel="nofollow">https://thisdataguy.com/2018/12/21/orc-benchmarking/</a></p></li></ul><h4 id="HiveCheatSheet-LLAP">LLAP</h4><ul><li><p>Community Connection Deep Dive; <a class="external-link" href="https://community.cloudera.com/t5/Community-Articles/Hive-LLAP-deep-dive/ta-p/248893" rel="nofollow">https://community.cloudera.com/t5/Community-Articles/Hive-LLAP-deep-dive/ta-p/248893</a></p></li><li><p>Hortonworks LLAP Connector; <a class="external-link" href="https://github.com/hortonworks-spark/spark-llap" rel="nofollow">https://github.com/hortonworks-spark/spark-llap</a> (not yet in either Hive or Spark ASF project)</p></li><li><p>Memory / Configuration Calculator; <a class="external-link" href="https://github.com/dstreev/hive_llap_calculator" rel="nofollow">https://github.com/dstreev/hive_llap_calculator</a></p></li></ul><h4 id="HiveCheatSheet-JOINS">JOINS</h4><ul><li><p>Old Facebook-Engineering post; <a class="external-link" href="https://www.facebook.com/notes/facebook-engineering/join-optimization-in-apache-hive/470667928919/" rel="nofollow">https://www.facebook.com/notes/facebook-engineering/join-optimization-in-apache-hive/470667928919/</a></p></li></ul><h4 id="HiveCheatSheet-HiveWarehouseConnector(HWC)">Hive Warehouse Connector (HWC)</h4><ul><li><p>HDP 3.1.5 Docs; <a class="external-link" href="https://docs.cloudera.com/HDPDocuments/HDP3/HDP-3.1.5/integrating-hive/content/hive_hivewarehouseconnector_for_handling_apache_spark_data.html" rel="nofollow">https://docs.cloudera.com/HDPDocuments/HDP3/HDP-3.1.5/integrating-hive/content/hive_hivewarehouseconnector_for_handling_apache_spark_data.html</a></p></li><li><p>HDP &lt; 3.1.5 (separate catalogs); <a class="external-link" href="http://docs.hortonworks.com.s3.amazonaws.com/HDPDocuments/HDP3/HDP-3.0.0/integrating-hive/hive_integrating_hive_and_bi.pdf" rel="nofollow">http://docs.hortonworks.com.s3.amazonaws.com/HDPDocuments/HDP3/HDP-3.0.0/integrating-hive/hive_integrating_hive_and_bi.pdf</a></p></li></ul><h4 id="HiveCheatSheet-Druid">Druid</h4><ul><li><p>Blog series; <a class="external-link" href="https://blog.cloudera.com/apache-hive-druid-part-1-3/" rel="nofollow">https://blog.cloudera.com/apache-hive-druid-part-1-3/</a> </p></li></ul><h4 id="HiveCheatSheet-ExternalResources">External Resources</h4><ul><li><p><a class="external-link" href="http://www.folkstalk.com/2011/11/date-functions-in-hive.html" rel="nofollow">Date Functions</a> write-up</p></li><li><p><a class="external-link" href="http://www.qubole.com/hive-best-practices/" rel="nofollow">10 Best Practices for Apache Hive</a></p></li><li><p>David Streever's <a class="external-link" href="https://streever.atlassian.net/wiki/x/AoAs" rel="nofollow">Tuning Hive-Tez</a> article</p></li><li><p><a class="external-link" href="https://streever.atlassian.net/wiki/x/DABD" rel="nofollow">HS2 jars for JDBC client</a></p></li></ul><h4 id="HiveCheatSheet-PopularConfigProperties(couldalsouse&quot;hive--hiveconfname=value&quot;;canhavemultiple--hiveconfblocks)">Popular Config Properties (could also use &quot;hive --hiveconf name=value&quot;; can have multiple --hiveconf blocks)</h4><p>These entries could also go in a ~/.hiverc file.</p><div class="table-wrap"><table data-layout="default" class="confluenceTable"><colgroup><col style="width: 294.0px;"/><col style="width: 466.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p>Configuration Property</p></th><th class="confluenceTh"><p>Notes</p></th></tr><tr><td class="confluenceTd"><p>set hive.cli.print.header=true;</p></td><td class="confluenceTd"><p>Shows column names at top of query results</p></td></tr><tr><td class="confluenceTd"><p>set hive.cli.print.current.db=true;</p></td><td class="confluenceTd"><p>Shows the current database in the command prompt</p></td></tr></tbody></table></div><h4 id="HiveCheatSheet-OtherStuff">Other Stuff</h4><ul><li><p><a class="external-link" href="http://stackoverflow.com/questions/18186973/simple-user-password-authentication-for-hiveserver2-without-kerberos-ldap" rel="nofollow">Custom Authentication Implementation for HiveServer2</a></p></li><li><p><a class="external-link" href="https://github.com/sharethrough/hive-udfs" rel="nofollow">Examples of storing UDFs on HDFS</a></p></li><li><p>LLAP (Low Latency Analytical Processor – aka Live Long And Persist)</p><ul><li><p><a class="external-link" href="https://community.cloudera.com/t5/Community-Articles/Hive-LLAP-deep-dive/ta-p/248893" rel="nofollow">LLAP deep dive</a></p></li><li><p><a class="external-link" href="https://github.com/dstreev/hive_llap_calculator" rel="nofollow">Hive LLAP Calculator</a></p></li></ul></li></ul><h4 id="HiveCheatSheet-RandomNotes">Random Notes</h4><p><a class="external-link" href="https://docs.cloudera.com/runtime/7.1.0/configuring-apache-hive/topics/hive_limit_hive_connections.html" rel="nofollow">Limiting HS2 Concurrent Connections</a></p><p>load data local inpath '/home/user1/test.txt' into table my_table;</p><p>Connecting via Beeline</p><ul><li><p>With two passes</p><ul><li><p><code>/usr/hdp/current/hive/bin/beeline </code> <br/></p></li><li><p><code>!connect jdbc:hive2://$hive.server.full.hostname:10000 $HIVE_USER password org.apache.hive.jdbc.HiveDriver</code> <br/></p></li></ul></li><li><p>As a single line</p><ul><li><p><code>beeline -u jdbc:hive2://$HIVE_SERVER_FQDN:10000 -n $HIVE_USER</code></p></li></ul></li><li><p>To quit, just type <code>!q</code><br/></p></li><li><p>Setting hive properties via JDBC connection string; <a class="external-link" href="https://community.hortonworks.com/articles/60309/working-with-variables-in-hive-hive-shell-and-beel.html" rel="nofollow">https://community.hortonworks.com/articles/60309/working-with-variables-in-hive-hive-shell-and-beel.html</a> </p></li></ul><h4 id="HiveCheatSheet-BlogPostingsonHive">Blog Postings on Hive</h4>
+
+
+
+
+
+
+
+
+
+
+
+    
+    <ul class="content-by-label conf-macro output-block" data-hasbody="false" data-layout="default" data-macro-id="377228b9-3140-4346-b239-79f78b2f5544" data-macro-name="contentbylabel">
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="1406009367" data-linked-resource-id="1406009367" data-linked-resource-type="blogpost" data-linked-resource-version="5" href="hive-delta-file-compaction-minor-and-major-1406009367.html">hive delta file compaction (minor and major)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="30736387"><a class="aui-label-split-main" href="/wiki/label/orc" rel="tag">orc</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="1411448879"><a class="aui-label-split-main" href="/wiki/label/acid" rel="tag">acid</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="1405059073" data-linked-resource-id="1405059073" data-linked-resource-type="blogpost" data-linked-resource-version="9" href="hive-acid-transactions-with-partitions-a-behind-the-scenes-p-1405059073.html">hive acid transactions with partitions (a behind the scenes perspective)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="1411448879"><a class="aui-label-split-main" href="/wiki/label/acid" rel="tag">acid</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="30736387"><a class="aui-label-split-main" href="/wiki/label/orc" rel="tag">orc</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="1397686273" data-linked-resource-id="1397686273" data-linked-resource-type="blogpost" data-linked-resource-version="3" href="viewing-the-content-of-orc-files-using-the-java-orc-tool-jar-1397686273.html">viewing the content of ORC files (using the Java ORC tool jar)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338894"><a class="aui-label-split-main" href="/wiki/label/java" rel="tag">java</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="30736387"><a class="aui-label-split-main" href="/wiki/label/orc" rel="tag">orc</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="98945691" data-linked-resource-id="98945691" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="my-talk-at-devnexus-links-to-video-and-preso-98945691.html">my talk at devnexus (links to video and preso)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="23691269"><a class="aui-label-split-main" href="/wiki/label/spark" rel="tag">spark</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20545537"><a class="aui-label-split-main" href="/wiki/label/conference" rel="tag">conference</a></li><li class="aui-label " data-label-id="20840451"><a class="aui-label-split-main" href="/wiki/label/hcatalog" rel="tag">hcatalog</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="9011227"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9011227" rel="tag">software_development</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="77529090" data-linked-resource-id="77529090" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="joining-multiple-datasets-with-pig-i-o-courtesy-of-hcatloade-77529090.html">joining multiple datasets with pig (i/o courtesy of hcatloader &amp; hcatstorer)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="9011227"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9011227" rel="tag">software_development</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="42663952" data-linked-resource-id="42663952" data-linked-resource-type="blogpost" data-linked-resource-version="6" href="trying-out-hive-testbench-on-hdp-sandbox-and-packaging-it-up-42663952.html">trying out hive testbench on hdp sandbox (and packaging it up for deployment elsewhere)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="42860545"><a class="aui-label-split-main" href="/wiki/label/tpc" rel="tag">tpc</a></li><li class="aui-label " data-label-id="42860546"><a class="aui-label-split-main" href="/wiki/label/tpc-ds" rel="tag">tpc-ds</a></li><li class="aui-label " data-label-id="42860547"><a class="aui-label-split-main" href="/wiki/label/tpc-h" rel="tag">tpc-h</a></li><li class="aui-label " data-label-id="42860548"><a class="aui-label-split-main" href="/wiki/label/benchmarking" rel="tag">benchmarking</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="43057153"><a class="aui-label-split-main" href="/wiki/label/testbench" rel="tag">testbench</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="41123865" data-linked-resource-id="41123865" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="presenting-at-hadoop-summit-archiving-evolving-databases-in--41123865.html">presenting at hadoop summit (archiving evolving databases in hive)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="41320449"><a class="aui-label-split-main" href="/wiki/label/summit" rel="tag">summit</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="23691273"><a class="aui-label-split-main" href="/wiki/label/sqoop" rel="tag">sqoop</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9011228"><a class="aui-label-split-main" href="/wiki/label/luck" rel="tag">luck</a></li><li class="aui-label " data-label-id="30736387"><a class="aui-label-split-main" href="/wiki/label/orc" rel="tag">orc</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="31358980"><a class="aui-label-split-main" href="/wiki/label/tuning" rel="tag">tuning</a></li><li class="aui-label " data-label-id="41320452"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=41320452" rel="tag">silicon_valley</a></li><li class="aui-label " data-label-id="34996226"><a class="aui-label-split-main" href="/wiki/label/california" rel="tag">california</a></li><li class="aui-label " data-label-id="20545537"><a class="aui-label-split-main" href="/wiki/label/conference" rel="tag">conference</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="38535264" data-linked-resource-id="38535264" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="connecting-dbvisualizer-to-hive-running-on-hdp-2-2-38535264.html">connecting dbvisualizer to hive (running on hdp 2.2)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="38043663" data-linked-resource-id="38043663" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="took-the-pig-hive-test-got-a-shiny-new-certificate-38043663.html">took the pig/hive test (got a shiny new certificate)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="10584071"><a class="aui-label-split-main" href="/wiki/label/certification" rel="tag">certification</a></li><li class="aui-label " data-label-id="9011227"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9011227" rel="tag">software_development</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="34832472" data-linked-resource-id="34832472" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="hadoop-mini-smoke-test-very-mini-34832472.html">hadoop mini smoke test (VERY mini)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="9338895"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338895" rel="tag">map_reduce</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="34996227"><a class="aui-label-split-main" href="/wiki/label/piggybank" rel="tag">piggybank</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="34996228"><a class="aui-label-split-main" href="/wiki/label/terasort" rel="tag">terasort</a></li><li class="aui-label " data-label-id="20840451"><a class="aui-label-split-main" href="/wiki/label/hcatalog" rel="tag">hcatalog</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="42860548"><a class="aui-label-split-main" href="/wiki/label/benchmarking" rel="tag">benchmarking</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="34832440" data-linked-resource-id="34832440" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="help-me-go-to-belgium-not-asking-for-money-just-a-couple-of--34832440.html">help me go to belgium (not asking for money, just a couple of votes)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="31358980"><a class="aui-label-split-main" href="/wiki/label/tuning" rel="tag">tuning</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="31129602" data-linked-resource-id="31129602" data-linked-resource-type="blogpost" data-linked-resource-version="2" href="changes-to-hive-s-decimal-datatype-it-could-cost-you-lots-of-31129602.html">changes to hive's decimal datatype (it could cost you lots of pennies)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="30605341" data-linked-resource-id="30605341" data-linked-resource-type="blogpost" data-linked-resource-version="3" href="stinger-next-to-the-rescue-but-you-do-have-stinger-now-tunin-30605341.html">stinger.next to the rescue (but you do have stinger.NOW tuning options available, well, &quot;now&quot;)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="30736386"><a class="aui-label-split-main" href="/wiki/label/stinger" rel="tag">stinger</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="23691265"><a class="aui-label-split-main" href="/wiki/label/tez" rel="tag">tez</a></li><li class="aui-label " data-label-id="30736387"><a class="aui-label-split-main" href="/wiki/label/orc" rel="tag">orc</a></li><li class="aui-label " data-label-id="31358980"><a class="aui-label-split-main" href="/wiki/label/tuning" rel="tag">tuning</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="30146564" data-linked-resource-id="30146564" data-linked-resource-type="blogpost" data-linked-resource-version="7" href="a-robust-set-of-hadoop-master-nodes-it-is-hard-to-swing-it-w-30146564.html">a robust set of hadoop master nodes (it is hard to swing it with two machines)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20119553"><a class="aui-label-split-main" href="/wiki/label/ambari" rel="tag">ambari</a></li><li class="aui-label " data-label-id="23691272"><a class="aui-label-split-main" href="/wiki/label/falcon" rel="tag">falcon</a></li><li class="aui-label " data-label-id="19005441"><a class="aui-label-split-main" href="/wiki/label/hbase" rel="tag">hbase</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="20840452"><a class="aui-label-split-main" href="/wiki/label/oozie" rel="tag">oozie</a></li><li class="aui-label " data-label-id="23691268"><a class="aui-label-split-main" href="/wiki/label/storm" rel="tag">storm</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="10584069"><a class="aui-label-split-main" href="/wiki/label/yarn" rel="tag">yarn</a></li><li class="aui-label " data-label-id="23691275"><a class="aui-label-split-main" href="/wiki/label/zookeeper" rel="tag">zookeeper</a></li><li class="aui-label " data-label-id="30343169"><a class="aui-label-split-main" href="/wiki/label/ha" rel="tag">ha</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="23494772" data-linked-resource-id="23494772" data-linked-resource-type="blogpost" data-linked-resource-version="5" href="use-hive-to-calculate-salary-statistics-for-georgia-educator-23494772.html">use hive to calculate salary statistics for georgia educators (third of a three-part series)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="23429121"><a class="aui-label-split-main" href="/wiki/label/hue" rel="tag">hue</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="23691279"><a class="aui-label-split-main" href="/wiki/label/beeswax" rel="tag">beeswax</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="12812289"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=12812289" rel="tag">data_science</a></li><li class="aui-label " data-label-id="23691278"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=23691278" rel="tag">open_source</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="22118426" data-linked-resource-id="22118426" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="create-and-share-a-hive-udf-the-cli-is-your-friend-22118426.html">create and share a hive udf (the cli is your friend)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="9011227"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9011227" rel="tag">software_development</a></li><li class="aui-label " data-label-id="9338894"><a class="aui-label-split-main" href="/wiki/label/java" rel="tag">java</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="22413313"><a class="aui-label-split-main" href="/wiki/label/udf" rel="tag">udf</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="21692429" data-linked-resource-id="21692429" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="stopping-oozie-from-limiting-the-number-of-reducers-on-your--21692429.html">stopping oozie from limiting the number of reducers on your hive action (just add some more xml)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="10584067"><a class="aui-label-split-main" href="/wiki/label/debugging" rel="tag">debugging</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840452"><a class="aui-label-split-main" href="/wiki/label/oozie" rel="tag">oozie</a></li><li class="aui-label " data-label-id="9338895"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338895" rel="tag">map_reduce</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="31358980"><a class="aui-label-split-main" href="/wiki/label/tuning" rel="tag">tuning</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="21299205" data-linked-resource-id="21299205" data-linked-resource-type="blogpost" data-linked-resource-version="6" href="how-do-i-load-a-fixed-width-formatted-file-into-hive-with-a--21299205.html">how do i load a fixed-width formatted file into hive? (with a little help from pig)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="20840451"><a class="aui-label-split-main" href="/wiki/label/hcatalog" rel="tag">hcatalog</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="20840450"><a class="aui-label-split-main" href="/wiki/label/pig" rel="tag">pig</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="9011227"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9011227" rel="tag">software_development</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="23429121"><a class="aui-label-split-main" href="/wiki/label/hue" rel="tag">hue</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+    </ul>
+</body>
+</html>

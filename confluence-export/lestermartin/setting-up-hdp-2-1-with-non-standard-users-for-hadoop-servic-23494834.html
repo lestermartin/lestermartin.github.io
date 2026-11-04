@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>setting up hdp 2.1 with non-standard users for hadoop services (why not use a non-standard user for ambari, too)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>setting up hdp 2.1 with non-standard users for hadoop services (why not use a non-standard user for ambari, too)</h1>
+<p class="meta">2014-05-07 &middot; Lester Martin</p>
+<p><style>[data-colorid=ibn7a6qfyp]{color:#555555} html[data-color-mode=dark] [data-colorid=ibn7a6qfyp]{color:#aaaaaa}[data-colorid=cf0pydxizu]{color:#555555} html[data-color-mode=dark] [data-colorid=cf0pydxizu]{color:#aaaaaa}[data-colorid=qcr8g33fac]{color:#333333} html[data-color-mode=dark] [data-colorid=qcr8g33fac]{color:#cccccc}[data-colorid=kpwpdqvclr]{color:#555555} html[data-color-mode=dark] [data-colorid=kpwpdqvclr]{color:#aaaaaa}</style>If you find yourself needing to setup Hortonworks Data Platform (HDP) with Ambari in an environment that users and groups need to be pre-provisioned instead of simply created during the install process, then don't fret as Ambari has got you covered.&nbsp; This write-up piggybacks the <a class="external-link" href="http://docs.hortonworks.com/" rel="nofollow">HDP Documentation</a> site and uses <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.1.2/index.html" rel="nofollow">HDP 2.1.2</a> along with <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/index.html" rel="nofollow">Ambari 1.5.1</a> as a baseline to build against.&nbsp; It will also build a 4-node cluster (2 worker nodes, 1 master node, and 1 node to run Knox on) all running on CentOS 6.5&nbsp;</p><p>As this whole post is about using non-standard users and groups, let's refer to <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html</a> which lists the default user and group names.&nbsp; For our purposes, let's just go and and prefix all of these with &quot;<code>ryo</code>&quot; (example: user account &quot;<code>mapred</code>&quot; for the MapReduce2 service will now be &quot;<code>ryomapred</code>&quot;).&nbsp; Also, we'll want to install, and execute, Ambari as a user other than root.&nbsp; Using this same general theme, we'll use &quot;<code>ryoambari</code>&quot; for the user and group name.</p><p>To get started, follow the general flow of&nbsp;<a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a> to set up the servers up until you get to the section called <strong>Install Cluster via Ambari</strong>.&nbsp; And yes, there are faster ways to get to this point such as described in&nbsp;<a class="external-link" href="https://blog.codecentric.de/en/2014/04/hadoop-cluster-automation/" rel="nofollow">https://blog.codecentric.de/en/2014/04/hadoop-cluster-automation/</a> using tools such as <a class="external-link" href="http://www.vagrantup.com/" rel="nofollow">Vagrant</a>, but there is value to walking these steps for those shoring up their linux admin skills.&nbsp; Back to those more lengthy instructions, start out building the <strong>First Master Node</strong> as described previously, but remember that we want to build CentOS 6.5 boxes<em> (grabbed my ISO <a class="external-link" href="http://centos.sonn.com/6.5/isos/x86_64/CentOS-6.5-x86_64-bin-DVD1.iso" rel="nofollow">here</a></em><em>)</em>.&nbsp; For this host name, call the VirtualBox entry <code>4N-HDP212-M1</code> to differentiate from the older 2.0 cluster.&nbsp; It's OK to reuse the <code>m1.hdp2</code> hostname.</p><p>Work through the same network setup instructions for this first node, but pause for a second when you get to the <strong>SSH Setup</strong> section.&nbsp; The instructions at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html</a> are to make sure that Ambari can make password-less SSH connections and are based on the default approach of letting Ambari run as <code>root</code>.&nbsp; As we'll be using &quot;<code>ryoambari</code>&quot; (mentioned above) we need to set this up when we are that user.&nbsp; To do that, we'll need the user in the first place.&nbsp; We can create the user (which creates a group with same name) and set the password to &quot;<code>hadoop</code>&quot; for simplicity's sake.&nbsp;</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# useradd -m -s /bin/bash ryoambari
+[root@m1 ~]# passwd ryoambari
+Changing password for user ryoambari.
+New password: 
+BAD PASSWORD: it is based on a dictionary word
+BAD PASSWORD: is too simple
+Retype new password: 
+passwd: all authentication tokens updated successfully.
+[root@m1 ~]# groupadd ryoambari
+groupadd: group 'ryoambari' already exists
+[root@m1 ~]# cat /etc/group
+ryoambari:x:500:
+[root@m1 ~]# cat /etc/passwd
+ryoambari:x:500:500::/home/ryoambari:/bin/bash</pre>
+</div></div><div class="confluence-information-macro confluence-information-macro-warning conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="warning"><span class="aui-icon aui-icon-small aui-iconfont-error confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>A note is identified in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html</a> that states &quot;<span data-colorid="ibn7a6qfyp">All new service user accounts, and any existing user accounts used as service users, must have a UID &gt;= 1000.</span>&quot;&nbsp;<em> Unfortunately, as described <a class="external-link" href="http://www.randmonline.com/2009/01/changing-uidgid-in-centos/" rel="nofollow">here</a></em><em>, CentOS &amp; RHEL begin their numbering at 500.</em></p></div></div><p>That's probably not a big deal for the account we are going to use for Ambari itself, but checking it out &amp; making corrective actions on this single account will allow us later to breeze through this concern in the verification/modification step.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# id -u ryoambari
+500
+[root@m1 ~]# usermod -u 1500 ryoambari
+[root@m1 ~]# groupmod -g 1500 ryoambari
+[root@m1 ~]# id -u ryoambari
+1500 </pre>
+</div></div><p>I simply added 1000 to the number.&nbsp; This will come in handy later as the UIDs for users should be greater than this value.</p><div class="confluence-information-macro confluence-information-macro-warning conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="warning"><span class="aui-icon aui-icon-small aui-iconfont-error confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>A note is identified in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html</a> that (in regards to installing/running Ambari) states, &quot;<span data-colorid="cf0pydxizu">It is possible to use a non-root SSH account, if that account can execute&nbsp;</span><code class="literal">sudo</code><span data-colorid="kpwpdqvclr">&nbsp;without entering a password.</span>&quot;&nbsp;</p></div></div><p>On that note there are great write-ups out there like found <a class="external-link" href="https://www.digitalocean.com/community/articles/how-to-edit-the-sudoers-file-on-ubuntu-and-centos" rel="nofollow">here</a>, but I cheated since this is a dev-only setup (virtualized even within my Mac) and every &quot;real&quot; environment will have a sysadmin who knows how to do this best for their setup.&nbsp; I followed <a class="external-link" href="http://serverfault.com/questions/160581/how-to-setup-passwordless-sudo-on-linux" rel="nofollow">this thread</a> and just did the following to grant everyone the ability to do password-less <code>sudo</code> commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">root@m1 ~]# cp /etc/sudoers ./sudoers.original
+[root@m1 ~]# visudo
+[root@m1 ~]# diff sudoers.original /etc/sudoers
+108a109
+&gt; ALL        ALL=(ALL)    NOPASSWD: ALL
+[root@m1 ~]# exit
+logout
+Connection to 192.168.56.41 closed.
+HW10653:~ lmartin$ ssh ryoambari@m1
+Warning: Permanently added 'm1' (RSA) to the list of known hosts.
+ryoambari@m1's password: 
+[ryoambari@m1 ~]$ sudo vi /etc/passwd
+[ryoambari@m1 ~]$ </pre>
+</div></div><p>Yep, that worked!&nbsp; I quickly backed out of that edit, but I got in without getting prompted for a password.&nbsp;<em> Again, <strong>this is surely NOT the way to do this on a production environment!</strong></em></p><p>Now we can circle back and work on the SSH instructions found at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html</a>, but do them with <code>ryoambari</code> instead of <code>root</code> as shown below (i.e. replaying the instructions back in <a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a>).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[ryoambari@m1 ~]$ sudo yum install openssh-clients
+[ryoambari@m1 ~]$ ssh localhost
+ryoambari@localhost's password: 
+Last login: Wed May  7 09:21:26 2014 from 192.168.56.1
+[ryoambari@m1 ~]$ exit
+logout
+Connection to localhost closed.
+[ryoambari@m1 ~]$ ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/ryoambari/.ssh/id_rsa): 
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /home/ryoambari/.ssh/id_rsa.
+Your public key has been saved in /home/ryoambari/.ssh/id_rsa.pub.
+The key fingerprint is:
+a0:6b:49:e6:27:f4:0c:2c:8b:bf:49:f8:bb:6d:07:4e ryoambari@m1.hdp2
+The key's randomart image is:
++--[ RSA 2048]----+
+|                 |
+|                 |
+|      .          |
+|   . . .         |
+|  . B   S        |
+| o BE*           |
+|o oo*.+          |
+| + +oo.          |
+|  B=..           |
++-----------------+
+[ryoambari@m1 ~]$ cd .ssh
+[ryoambari@m1 .ssh]$ pwd
+/home/ryoambari/.ssh
+[ryoambari@m1 .ssh]$ ls -l
+total 12
+-rw-------. 1 ryoambari ryoambari 1675 May  7 19:52 id_rsa
+-rw-r--r--. 1 ryoambari ryoambari  399 May  7 19:52 id_rsa.pub
+-rw-r--r--. 1 ryoambari ryoambari  391 May  7 09:29 known_hosts
+[ryoambari@m1 .ssh]$ cat id_rsa.pub &gt;&gt; authorized_keys
+[ryoambari@m1 .ssh]$ ls -l
+total 16
+-rw-rw-r--. 1 ryoambari ryoambari  399 May  7 19:53 authorized_keys
+-rw-------. 1 ryoambari ryoambari 1675 May  7 19:52 id_rsa
+-rw-r--r--. 1 ryoambari ryoambari  399 May  7 19:52 id_rsa.pub
+-rw-r--r--. 1 ryoambari ryoambari  391 May  7 09:29 known_hosts
+[ryoambari@m1 .ssh]$ chmod 600 authorized_keys 
+[ryoambari@m1 .ssh]$ ls -l
+total 16
+-rw-------. 1 ryoambari ryoambari  399 May  7 19:53 authorized_keys
+-rw-------. 1 ryoambari ryoambari 1675 May  7 19:52 id_rsa
+-rw-r--r--. 1 ryoambari ryoambari  399 May  7 19:52 id_rsa.pub
+-rw-r--r--. 1 ryoambari ryoambari  391 May  7 09:29 known_hosts
+[ryoambari@m1 .ssh]$ cd ..
+[ryoambari@m1 ~]$ pwd
+/home/ryoambari
+[ryoambari@m1 ~]$ 
+[ryoambari@m1 ~]$ ssh localhost
+Last login: Wed May  7 09:29:10 2014 from localhost
+[ryoambari@m1 ~]$ 
+[ryoambari@m1 ~]$ cd .ssh
+[ryoambari@m1 .ssh]$ echo 'StrictHostKeyChecking no' &gt;&gt; config
+[ryoambari@m1 .ssh]$ cat config 
+StrictHostKeyChecking no
+[ryoambari@m1 .ssh]$ </pre>
+</div></div><p>Now for an important step of this deviation from a standard install.&nbsp; As <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html</a> calls out, we are going to create users &amp; groups ahead of time.&nbsp; The following commands will create the three groups that we need and, even though there is no special warning about their IDs being &gt;= 1000, we'll do just that.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">sudo groupadd ryohadoop
+sudo groupmod -g 2001 ryohadoop
+sudo groupadd ryonagios
+sudo groupadd ryonobody</pre>
+</div></div><p>These IDs can be verified as shown in the abbreviated output below.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[ryoambari@m1 ~]$ cat /etc/group
+ryoambari:x:1500:
+ryohadoop:x:2001:
+ryonagios:x:2002:
+ryonobody:x:2003:</pre>
+</div></div><p>Now we need to run the following commands to get all the users created and put in their appropriate groups.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">sudo useradd -gryohadoop ryohdfs
+sudo useradd -gryohadoop ryoyarn
+sudo useradd -gryohadoop ryomapred
+sudo useradd -gryohadoop ryotez
+sudo useradd -gryohadoop ryohbase
+sudo useradd -gryohadoop ryohive
+sudo useradd -gryohadoop ryohcat
+sudo useradd -gryohadoop ryofalcon
+sudo useradd -gryohadoop ryostorm
+sudo useradd -gryohadoop ryooozie
+sudo useradd -gryohadoop ryopostgres
+sudo useradd -gryohadoop ryozookeeper
+sudo useradd -gryohadoop ryoambari-qa
+
+sudo useradd -gryonobody ryonobody
+sudo usermod -Gryohadoop ryonobody
+sudo useradd -gryonobody ryorrdcahed
+sudo usermod -Gryohadoop ryorrdcahed
+sudo useradd -gryonobody ryoapache
+sudo usermod -Gryohadoop ryoapache
+
+sudo useradd -gryonagios ryonagios
+sudo usermod -Gryohadoop ryonagios</pre>
+</div></div><p>Knowing that the <code>ryoambari</code> UID was 1500 suggested these new users would have IDs &gt;= 1000 as well and can easily be verified.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[ryoambari@m1 ~]$ cat /etc/passwd
+ryoambari:x:1500:1500::/home/ryoambari:/bin/bash
+ryoyarn:x:1502:2001::/home/ryoyarn:/bin/bash
+ryohdfs:x:1503:2001::/home/ryohdfs:/bin/bash
+ryomapred:x:1504:2001::/home/ryomapred:/bin/bash
+ryotez:x:1505:2001::/home/ryotez:/bin/bash
+ryohbase:x:1506:2001::/home/ryohbase:/bin/bash
+ryohive:x:1507:2001::/home/ryohive:/bin/bash
+ryohcat:x:1508:2001::/home/ryohcat:/bin/bash
+ryofalcon:x:1509:2001::/home/ryofalcon:/bin/bash
+ryostorm:x:1510:2001::/home/ryostorm:/bin/bash
+ryooozie:x:1511:2001::/home/ryooozie:/bin/bash
+ryopostgres:x:1512:2001::/home/ryopostgres:/bin/bash
+ryozookeeper:x:1513:2001::/home/ryozookeeper:/bin/bash
+ryoambari-qa:x:1514:2001::/home/ryoambari-qa:/bin/bash
+ryonobody:x:1515:2003::/home/ryonobody:/bin/bash
+ryorrdcahed:x:1516:2003::/home/ryorrdcahed:/bin/bash
+ryoapache:x:1517:2003::/home/ryoapache:/bin/bash
+ryonagios:x:1518:2002::/home/ryonagios:/bin/bash</pre>
+</div></div><p>Now you can return to the notes in&nbsp;<a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a> (<span class="confluence-link">&nbsp;</span>i.e. keep on chugging through the install docs) after the <strong>SSH Setup</strong> section and work all the way through <strong>Rinse, Lather, and Repeat..</strong>. as long as you take into account the change to the hosts we are trying to build and set them up as identified below.&nbsp; We can call the newly created VirtualBox appliance <strong>4N-HDP212-template</strong> (with file name of <strong>4N-HDP212-template.ova</strong>).</p><div class="table-wrap"><table class="confluenceTable"><tbody><tr><th class="confluenceTh"><div class="tablesorter-header-inner">VirtualBox Name</div></th><th class="confluenceTh"><div class="tablesorter-header-inner">OS Hostname</div></th><th class="confluenceTh"><div class="tablesorter-header-inner">IP Address</div></th></tr><tr><td colspan="1" class="confluenceTd">4N-HDP212-K1</td><td colspan="1" class="confluenceTd">k1.hdp2</td><td colspan="1" class="confluenceTd">192.168.56.31</td></tr><tr><td class="confluenceTd">4N-HDP212-M1</td><td class="confluenceTd">m1.hdp2</td><td class="confluenceTd">192.168.56.41</td></tr><tr><td class="confluenceTd">4N-HDP2-W1</td><td class="confluenceTd">w1.hdp2</td><td class="confluenceTd">192.168.56.51</td></tr><tr><td class="confluenceTd">4N-HDP2-W2</td><td class="confluenceTd">w2.hdp2</td><td class="confluenceTd">192.168.56.52</td></tr></tbody></table></div><p>When you start each VM up for the first time, log in as <code>ryoambari</code> to make all the identified changes to make the box unique (prefixing everything with <code>sudo</code> of course).</p><p>As I was working through the <strong>Ensure Connectivity Between Nodes</strong> section of the other post I ran into the problem below and thanks to some quick googling I found a quick fix at <a class="external-link" href="http://www.omnicode.com/qa.php?id=69" rel="nofollow">http://www.omnicode.com/qa.php?id=69</a> that did the trick.&nbsp; Unfortunately, I had to do this on each box.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[ryoambari@m1 ~]$ ssh k1.hdp2
+Bad owner or permissions on /home/ryoambari/.ssh/config
+[ryoambari@m1 ~]$ cd .ssh
+[ryoambari@m1 .ssh]$ ls -l
+total 20
+-rw-------. 1 ryoambari ryoambari  399 May  7 19:53 authorized_keys
+-rw-rw-r--. 1 ryoambari ryoambari   25 May  8 20:06 config
+-rw-------. 1 ryoambari ryoambari 1675 May  7 19:52 id_rsa
+-rw-r--r--. 1 ryoambari ryoambari  399 May  7 19:52 id_rsa.pub
+-rw-r--r--. 1 ryoambari ryoambari  794 May  8 20:06 known_hosts
+[ryoambari@m1 .ssh]$ chmod 600 *
+[ryoambari@m1 .ssh]$ ssh k1.hdp2
+Last login: Thu May  8 20:06:02 2014 from m1.hdp2
+[ryoambari@k1 ~]$ ssh m1.hdp2
+Bad owner or permissions on /home/ryoambari/.ssh/config
+[ryoambari@k1 ~]$ cd .ssh
+[ryoambari@k1 .ssh]$ chmod 600 *
+[ryoambari@k1 .ssh]$ ssh m1.hdp2
+Warning: Permanently added 'm1.hdp2,192.168.56.41' (RSA) to the list of known hosts.
+Last login: Thu May  8 20:05:49 2014 from localhost
+[ryoambari@m1 ~]$ </pre>
+</div></div><p><strong><em>Phew... that's done!&nbsp; Now we (finally) get to start installing Ambari.</em></strong>&nbsp; For the most part, just follow the <strong>Install Cluster via Ambari</strong> ramblings back in <a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a>.&nbsp; Of course, this is HDP 2.1, not 2.0, but very similar.&nbsp; I'll call out the major differences below.</p><p>Just to make my install a bit more interesting, I decided to go down the optional step identified at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-6.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-6.html</a> since most datacenter-based clusters will not have internet access.&nbsp; Thankfully, I already did all this setup on my <code>m1.hdp2</code> master node where I will be installing Ambari in an earlier post; <a href="using-your-mac-to-install-a-virtualized-hadoop-cluster-then--23494844.html" data-linked-resource-id="23494844" data-linked-resource-version="7" data-linked-resource-type="blogpost">using your mac to install a virtualized hadoop cluster? (then setup a local repo on it)</a>.&nbsp; <em>Feel free to just skip that if your fingers are already getting tired on this exercise.</em></p><p>It looks like during the &quot;<code>sudo ambari-server setup</code>&quot; exercise discussed in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap2-2.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap2-2.html</a> I lost my chance to use the &quot;<code>ryopostgres</code>&quot; user I created earlier by not choosing to enter the advanced database configuration.&nbsp; This one is OK as most enterprises will already have a centralized database they want to use anyway and the setup for that will trump this concern.</p><p>If you went down the local repo option like I did, then when you get to <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-2a_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-2a_2x.html</a> make sure your screen looks something like the following (i.e. use the URL you created in the prior posting).</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/212stack.png" data-unresolved-comment-count="0" data-linked-resource-id="23724072" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="d0574498-895b-4ca8-a8d3-6398a8903cf1" data-media-type="file" /></span></p><p>There is a subtle callout on <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-3_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-3_2x.html</a> for running Ambari as another user besides <code>root</code> and the screenshot below shows what that looks like when declared to run as <code>ryoambari</code>.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/sshUserField.png" data-unresolved-comment-count="0" data-linked-resource-id="23724073" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="f48cb704-eb2f-4936-898d-dd6e9bcb1908" data-media-type="file" /></span></p><p>Unfortunately, the Confirm Hosts page showed failures for all nodes with the following messages.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">ERROR 2014-05-08 22:21:18,891 NetUtil.py:56 - [Errno 1] _ssl.c:492: error:100AE081:elliptic curve routines:EC_GROUP_new_by_curve_name:unknown group
+ERROR 2014-05-08 22:21:18,892 NetUtil.py:58 - SSLError: Failed to connect. Please check openssl library versions. 
+Refer to: https://bugzilla.redhat.com/show_bug.cgi?id=1022468 for more details.
+INFO 2014-05-08 22:21:18,892 NetUtil.py:81 - Server at https://m1.hdp2:8440 is not reachable, sleeping for 10 seconds...
+', None)</pre>
+</div></div><p>The good news is that message was referenced in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-4_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap3-4_2x.html</a> and following the information provided I found out that I needed a newer version of OpenSSL which was accomplished by running &quot;<code>sudo yum upgrade openssl</code>&quot; on all the boxes to get past these errors.</p><p>I also found out that I had a warning from each of the four nodes that the ntpd service was not running.&nbsp; I thought I took care of this earlier, but either way I just followed the instructions on this back in&nbsp;<a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a> the warnings cleared up.</p><p>Unlike the other cluster install instructions, for this setup we want all services checked on the Choose Services page and then you can take some creative liberty on the Assign Masters page.&nbsp; Here's a snapshot of my selections.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/hdp212assignMasters.png" data-unresolved-comment-count="0" data-linked-resource-id="23724075" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="cbd6096d-28a6-406a-9121-270c6988ae00" data-media-type="file" /></span></p><p>Here's a view of how the Assign Slaves and Clients screen looked during the installation.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/hdp212assignSlaves.png" data-unresolved-comment-count="0" data-linked-resource-id="23724076" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="7397b23e-def4-494a-b880-2b2eff0f4f9d" data-media-type="file" /></span></p><p>The prior instructions help you clear the Hive and Oozie warnings on the Customize Services screen.&nbsp; The Nagios ones can be handled just as easy (i.e. just keep using &quot;<code>hadoop</code>&quot; as the password).&nbsp; <em>Also, since we only have two DataNodes it would make sense to throttle back the HDFS &gt; Advanced &gt; Block replication value from 3 to 2.</em></p><p>Critical to this blog posting is the Misc tab here on the Customize Services screen <span class="nolink">&nbsp;</span>which should be setup as the following.&nbsp; I basically put &quot;<code>ryo</code>&quot; in front of all except a couple of items, but <strong><em>be sure to read the notes below the screenshot before moving on</em></strong>.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/hdp212userNames.png" data-unresolved-comment-count="0" data-linked-resource-id="23724077" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="dcc2c9fd-f362-4278-96b7-b5eee4708976" data-media-type="file" /></span></p><p>Looking back on <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-users_2x.html</a> it seems I had some earlier misunderstandings about how this would all go.&nbsp; The following table identifies these and the remedial action, if any, I took to resolve each.</p><div class="table-wrap"><table class="confluenceTable"><tbody><tr><th class="confluenceTh">Item to Resolve</th><th class="confluenceTh">Action Taken</th></tr><tr><td class="confluenceTd">The Misc tab had a &quot;<span data-colorid="qcr8g33fac">Proxy group for Hive, WebHCat, Oozie and Falcon</span>&quot; field that I wasn't expecting</td><td class="confluenceTd">I simply left it as &quot;<code>users</code>&quot;</td></tr><tr><td class="confluenceTd">The Misc tab had no place to identify the Ganglia Group of &quot;<code>ryonobody</code>&quot; that I previously created and used as the primary group for the &quot;<code>ryonobody</code>&quot; user</td><td class="confluenceTd">Knowing there is a user and a group both named &quot;<code>nobody</code>&quot; on the base OS install (and considering the bolt-on nature of Ganglia to HDP) I left the user as &quot;<code>nobody</code>&quot;</td></tr><tr><td class="confluenceTd">The Misc tab had no place to identify the RRDTool's &quot;<code>ryorrdcahed</code>&quot; user that I previously created</td><td class="confluenceTd">Reading the notes again I decided (maybe realized?) this is another bolt-on service for HDP and didn't worry about the user I previously created</td></tr><tr><td colspan="1" class="confluenceTd">The Misc tab had no place to identify the &quot;<code>ryoapache</code>&quot; user that is associated with Ganglia</td><td colspan="1" class="confluenceTd">Same as prior action</td></tr><tr><td colspan="1" class="confluenceTd">The Misc tab had not place to identify the &quot;<code>ryopostgres</code>&quot; user that Ambari itself uses</td><td colspan="1" class="confluenceTd">No worries, but this could have been resolved during the CLI setup of Ambari as mentioned earlier</td></tr></tbody></table></div><p>Thankfully... the Install, Start and Test screen clear with all green bars.&nbsp; Now, like shown at the end of <a href="building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a>, we need to make sure the ambari-server and ambari-agent services are started upon reboot.&nbsp; After taking care of that and restarted the virtual machines and starting all Hadoop services from Ambari, all heck broke loose.&nbsp; As you do in situations like this, I worked the logs and finally got some answers.</p><p>It seems the service YARN was actually kicking off as the user &quot;<code>yarn</code>&quot; as the box started and my user &quot;<code>ryoyarn</code>&quot; was then failing when being started from Ambari.&nbsp; Medium story, short, I ended up realizing I needed to remove all the users with the default names that Ambari told me I could cleanup later.&nbsp; Of course, I started with the &quot;<code>yarn</code>&quot; user, but was being told I couldn't as it was logged in which was resolved with a bit of brute force (i.e. I ran &quot;<code>sudo su - yarn</code>&quot;, then &quot;<code>kill -9 -1</code>&quot;, &quot;<code>exit</code>&quot; to return to &quot;<code>ryoambari</code>&quot;, and then kicked off the &quot;<code>sudo userdel yarn</code>&quot; which completed.&nbsp; I did this on all four boxes.</p><p>I then had some permission problems with the home directories on the users I created (not sure why HDP needed to do anything with these directories) that I also solved with some brute force; &quot;<code>sudo chmod 777 /home/*</code>&quot;.&nbsp; I also decided I'd better go ahead and delete the other default user accounts on all boxes.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">sudo userdel zookeeper
+sudo userdel hdfs
+sudo userdel mapred
+sudo userdel falcon
+sudo userdel hbase
+sudo userdel hive
+sudo userdel oozie
+sudo userdel sqoop
+sudo userdel storm</pre>
+</div></div><p>I was able to stop and start all service to green bar (although I did it service by service) after these modifications and I also restarted the OS on all the boxes to make sure I could get back to this &quot;green&quot; place.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/hdp212dashboard.png" data-unresolved-comment-count="0" data-linked-resource-id="23887873" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494834" data-linked-resource-container-version="27" data-media-id="a6fa0603-71cb-4d88-a78e-6264b0ec7d67" data-media-type="file" /></span></p><p>This environment surely needs to be test some more to verify all is as well as it looks like it is.&nbsp; Also, there were a number of brute force hacks that I did because this is a dev cluster and they each warrant revisiting if you were considering going forward with something like this.</p><p>The real driver for this posting was to see that you could use different user &amp; groups names for the service as well as run Ambari as another user than root.&nbsp; <strong>I believe I've shown that this is the case</strong>, but...<em> I would not recommend this be done for a production cluster</em>.&nbsp;</p><p><strong>Final Words: Don't do this!&nbsp; Stick with the default user and group names to prevent as many problems <em>(those found and those yet uncovered)</em> as possible.</strong></p>
+</body>
+</html>

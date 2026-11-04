@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hive acid transactions with partitions (a behind the scenes perspective)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>hive acid transactions with partitions (a behind the scenes perspective)</h1>
+<p class="meta">2019-12-22 &middot; Lester Martin</p>
+<p>Ever since <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/Hive+Transactions" rel="nofollow">Hive Transactions</a> have surfaced, and especially since <a class="external-link" href="http://hive.apache.org/" rel="nofollow">Apache Hive</a> 3 was released, I’ve been meaning to capture a behind-the-scenes look at the underlying delta <a class="external-link" href="https://orc.apache.org/" rel="nofollow">ORC</a> files that are created; and yes, compacted.  If you are new to Hive’s ACID transactions, then the first link in this post as well as the <a class="external-link" href="http://shzhangji.com/blog/2019/06/10/understanding-hive-acid-transactional-table/" rel="nofollow">Understanding Hive ACID Transaction Table</a> blog posting are great places to start.</p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="82dbb13a-b68a-416b-9046-91bfc139c75d" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>Bonus points to those who remember what ACID stands for – add a comment at the bottom of this posting if you know!  <em>If you don’t it might be time to review RDBMS fundamentals. </em><img class="emoticon emoticon-wink" data-emoji-id="1f609" data-emoji-shortname=":wink:" data-emoji-fallback="😉" src="images/wink.png" width="16" height="16" data-emoticon-name="wink" alt="(wink)" /></p></div></div><p /><div class="toc-macro client-side-toc-macro  conf-macro output-block" data-hasbody="false" data-headerelements="H1,H2,H3,H4,H5,H6,H7" data-layout="default" data-macro-id="47b51d27-5016-43b0-aff2-cfac1f750ec6" data-macro-name="toc"> </div><h1 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-TransactionalTableDDL">Transactional Table DDL</h1><p>Let’s create a transactional table with some Data Definition Language to test our use cases out on.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="54aaeb0b-80fc-4d6c-a934-efed9e02359e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">CREATE TABLE try_it (id int, a_val string, b_val string)
+ PARTITIONED BY (prt string)  STORED AS ORC;
+ 
+desc try_it;
++--------------------------+------------+----------+
+|         col_name         | data_type  | comment  |
++--------------------------+------------+----------+
+| id                       | int        |          |
+| a_val                    | string     |          |
+| b_val                    | string     |          |
+| prt                      | string     |          |
+|                          | NULL       | NULL     |
+| # Partition Information  | NULL       | NULL     |
+| # col_name               | data_type  | comment  |
+| prt                      | string     |          |
++--------------------------+------------+----------+</pre>
+</div></div><p>Check to make sure the HDFS file structure was created.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0f91eca2-c495-4227-9035-b30136b29bd3" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hdfs dfs -ls /warehouse/tablespace/managed/hive/
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:38 /wa/t/m/h/try_it</pre>
+</div></div><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="809bdc34-1c21-48c6-bfac-65257bf6dd82" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>The <code>/warehouse/tablespace/managed/hive/</code> path is abbrevited as <code>/wa/t/m/h/</code> in the above snippet and in the remainder of this blog posting.</p></div></div><h1 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-DMLUseCases">DML Use Cases</h1><p>Let’s explore some CRUD (Create, Retrieve, Update, Delete) uses cases as expressed in Data Manipulation Language.</p><h2 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-Txn1:INSERTSingleRow">Txn 1: INSERT Single Row</h2><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="5e62cbe0-3ab5-435c-acec-69f6d5a35f28" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">INSERT INTO try_it VALUES (1, 'noise', 'bogus', 'p1');
+
+select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 1          | noise         | bogus         | p1          |
++------------+---------------+---------------+-------------+
+1 row selected (0.515 seconds)</pre>
+</div></div><p>Verify that the p1 partition now has a delta file and that it only includes changes belonging to transaction #1 (see the <code>delta_0000001_0000001</code> indicator).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0dd091fc-f3c5-4c97-9b50-d438124f2e58" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/bucket_00000</pre>
+</div></div><p>Pull down this delta file and use the knowledge from <a href="viewing-the-content-of-orc-files-using-the-java-orc-tool-jar-1397686273.html" data-linked-resource-id="1397686273" data-linked-resource-version="3" data-linked-resource-type="blogpost">viewing the content of ORC files (using the Java ORC tool jar)</a> to inspect it.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="f89a7740-a5fa-4d27-9a36-5bf38177f94f" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hdfs dfs -get /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/bucket_00000 add1
+ls -l add*
+-rw-r--r--. 1 hive hadoop 788 Dec 12 08:09 add1
+
+java -jar orc-tools-1.5.1-uber.jar data add1
+Processing data file add1 [length: 788]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:1,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:1,
+&quot;row&quot;:{&quot;id&quot;:1,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus&quot;}}</pre>
+</div></div><p>You can see the single row we added into the p1 partition is present.  You’ll also notice it is annotated as coming from transaction #1 as indicated by <code>&quot;currentTransaction&quot;:1</code>.</p><h2 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-Txn2:INSERTMultipleRowsAcrossMultiplePartitions">Txn 2: INSERT Multiple Rows Across Multiple Partitions</h2><p>Insert statements allow multiple rows to be added at once and they all belong to a single ACID transaction.  This use case is to exercise that, but to make it a bit more fun we can span more than one partition.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a9f8fd68-02ce-4d15-b711-afebf27f5211" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">INSERT INTO try_it VALUES 
+(2, 'noise', 'bogus', 'p2'),
+(3, 'noise', 'bogus', 'p3');
+
+select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 1          | noise         | bogus         | p1          |
+| 2          | noise         | bogus         | p2          |
+| 3          | noise         | bogus         | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.193 seconds)</pre>
+</div></div><p>Verify that <strong>both</strong> p1 and p2 partitions now have delta file directories/files which each contain changes belonging to transaction #2.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="f5933da1-ccae-451e-9c1e-0a1c7b11290a" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        796 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/bucket_00000</pre>
+</div></div><p>Pull down the delta files and inspect them.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="bab23859-174d-4d46-ba73-a203a1c03e42" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hive@ip-172-30-8-35 ~]$ hdfs dfs -get /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/bucket_00000 add2-p2
+[hive@ip-172-30-8-35 ~]$ hdfs dfs -get /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/bucket_00000 add2-p3
+[hive@ip-172-30-8-35 ~]$ ls -l add2-*
+-rw-r--r--. 1 hive hadoop 788 Dec 12 09:22 add2-p2
+-rw-r--r--. 1 hive hadoop 796 Dec 12 09:22 add2-p3
+
+$ java -jar orc-tools-1.5.1-uber.jar data add2-p2
+Processing data file add2-p2 [length: 788]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:2,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:2,
+&quot;row&quot;:{&quot;id&quot;:2,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus&quot;}}
+
+$ java -jar orc-tools-1.5.1-uber.jar data add2-p3
+Processing data file add2-p3 [length: 796]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:2,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:2,
+&quot;row&quot;:{&quot;id&quot;:3,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus&quot;}}</pre>
+</div></div><p>You can now see that both the p2 and p3 record additions are linked to <code>&quot;currentTransaction&quot;:2</code>.  To reiterate, transaction #2 spanned multiple partitions and each partition’s delta folder/file was properly aligned with the same transaction.</p><h2 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-Txn3:UPDATEMultipleRowsAcrossMultiplePartitions">Txn 3: UPDATE Multiple Rows Across Multiple Partitions</h2><p>Updates are tricky with Hive Transactions as there is no real in-place update occurring.  Basically, Hive deletes the record to be updated and then does a net-new insert to account for what the updated recorded should look like at the end of the SQL statement.  The section will show what this looks like behind-the-scenes.</p><p>To make the use case more interesting, we’ll make the update span records in multiple partitions so that we can see a similar behavior to the prior use case of a particular transaction number spanning these affected partitions.</p><p>Let’s start off with the SQL.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="ede3a7af-5da9-495f-8395-a27af63cea55" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">UPDATE try_it SET b_val = 'bogus2' WHERE a_val = 'noise';
+
+select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 1          | noise         | bogus2        | p1          |
+| 2          | noise         | bogus2        | p2          |
+| 3          | noise         | bogus2        | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.192 seconds)</pre>
+</div></div><p>Verify that all three partitions are modified by each having <code>delete_delta_</code> and <code>delta_</code> directories. </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a6031183-357a-444d-b598-f4964b909d0e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/bucket_00000
+    ... delta_0000001_0000001_ DELETED FOR BRIEVITY ...
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/bucket_00000
+    ... delta_0000002_0000002_ DELETED FOR BRIEVITY ...
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/bucket_00000
+    ... delta_0000002_0000002_ DELETED FOR BRIEVITY ...
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        807 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/bucket_00000</pre>
+</div></div><p>Let’s just focus on p2’s files as the other two partitions are basically the same thing.</p><p>First, look at the delete file which shows that this is <code>&quot;currentTransaction&quot;:3</code> which is a delete of <code>&quot;originalTransaction&quot;:2</code> created earlier in transaction #2.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="85e8b5b5-c720-445b-b6ba-54bc01d44690" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/bucket_00000 updateAllPartitionsExample-delete_delta
+$ java -jar orc-tools-1.5.1-uber.jar data updateAllPartitionsExample-delete_delta 
+Processing data file updateAllPartitionsExample-delete_delta [length: 727]
+{&quot;operation&quot;:2,&quot;originalTransaction&quot;:2,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:3,
+&quot;row&quot;:null}</pre>
+</div></div><p>The delta file then shows a new <code>&quot;currentTransaction&quot;:3</code> record which is the projection of what the update statement modified to the record that was just deleted.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="5d93a437-8202-4208-a983-8e85e6d161a2" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get  /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/bucket_00000 updateAllPartitionsExample-delta
+$ java -jar orc-tools-1.5.1-uber.jar data updateAllPartitionsExample-delta 
+Processing data file updateAllPartitionsExample-delta [length: 816]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:3,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:3,
+&quot;row&quot;:{&quot;id&quot;:2,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus2&quot;}}</pre>
+</div></div><h2 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-Txn4:UPDATESingleRow(LeveragingPartitioning)">Txn 4: UPDATE Single Row (Leveraging Partitioning)</h2><p>This use case is just calling out that that we should be using the partitioned virtual column in the update statement as much as possible to make Hive’s just much easier, but only looking in the folders that can possibly be affected instead of walking the full table’s contents.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="e5aa9215-5f96-4d7a-bd73-b20dc526ef29" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">UPDATE try_it SET b_val = 'bogus3' WHERE b_val = 'bogus2' AND prt = 'p2';
+
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 1          | noise         | bogus2        | p1          |
+| 2          | noise         | bogus3        | p2          |
+| 3          | noise         | bogus2        | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.201 seconds)</pre>
+</div></div><p>In this example, without the partition condition we would have updated all three partitions again.  Make sure only the p2 partition shows <code>delete_delta_0000004_0000004_</code> and <code>delta_0000004_0000004_</code> folders.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="bed4a17b-42b0-4bf0-83b7-21c5ac481afa" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        815 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        796 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        807 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/bucket_00000</pre>
+</div></div><p>There is no need to look at the ORC files for this change as it is similar to what we saw in transaction #3.</p><h2 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-Txn5&amp;6:UPDATESingleRowtoChangePartition">Txn 5 &amp; 6: UPDATE Single Row to Change Partition</h2><p>A student in a recent class asked if it would be possible to run an update statement that changed the partition virtual column value.  I wasn’t sure and could argue it both ways.  So, like most things in Hadoop the best way to answer a question like this is to just TRY IT!</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="ee47b6e9-afb4-4c8c-87db-d2d9a052bc7d" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">UPDATE try_it SET prt = 'p3' WHERE a_val = 'noise' AND prt = 'p1';
+
+Error: Error while compiling statement: FAILED: SemanticException [Error 10292]: 
+  Updating values of partition columns is not supported (state=42000,code=10292)</pre>
+</div></div><p>Well, as you can see, NO JOY!!  But would could just run to separate transactions; one to delete it and one to add it, but we do not have an atomic transaction with this and the responsibility of the data integrity would fall to the application, or person, to make sure both are committed.  </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="2e9b26bd-68cc-4f51-85b6-e8a014b63e04" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">DELETE FROM try_it WHERE a_val = 'noise' AND prt = 'p1';
+
+INSERT INTO try_it VALUES (1,'noise','bogus2','p3');
+
+select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 2          | noise         | bogus3        | p2          |
+| 3          | noise         | bogus2        | p3          |
+| 1          | noise         | bogus2        | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.227 seconds)</pre>
+</div></div><p>Here are the applicable HDFS details for these <strong>two</strong> transactions.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a52e1ce9-387b-4a3d-b61b-06a793891d4a" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">drwxrwx---+  - hive hadoop          0 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        813 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000/bucket_00000</pre>
+</div></div><h1 id="hiveacidtransactionswithpartitions(abehindthescenesperspective)-PartingThoughts">Parting Thoughts</h1><p>These ACID transaction capabilities were mentioned way back during my <a href="presenting-at-hadoop-summit-archiving-evolving-databases-in--41123865.html" data-linked-resource-id="41123865" data-linked-resource-version="1" data-linked-resource-type="blogpost">presenting at hadoop summit (archiving evolving databases in hive)</a> talk a few years ago and provide a much cleaner way at develop-time to address this need for allowing mutable data in Hive’s (previously) immutable world.  </p><p>A concern that surfaces is that <a href="small-files-and-hadoop-s-hdfs-bonus-an-inode-formula-26148906.html" data-linked-resource-id="26148906" data-linked-resource-version="2" data-linked-resource-type="blogpost">small files and hadoop's hdfs (bonus: an inode formula)</a> causes not just “Namenode pressure”, but also forces the processing to read potentially lots and lots of small(ish) delta files instead of a few big(ger) “base” files.  To make it worse, this work cannot be done in parallel for a given partition due to the need to walk these edits files in order so that Hive can present an accurate representation of what the end results should be.</p><p>Some of these concerns are addressed with <a href="hive-delta-file-compaction-minor-and-major-1406009367.html" data-linked-resource-id="1406009367" data-linked-resource-version="5" data-linked-resource-type="blogpost">hive delta file compaction (minor and major)</a> processing that exists and anther big helper is to leverage the MERGE command to lump many changes into a single transaction.  Both of these topics will be presented in future blog posts.</p><p />
+</body>
+</html>

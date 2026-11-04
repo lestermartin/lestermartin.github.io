@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hadoop streaming with .net map reduce api (executing on hdp for windows)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>hadoop streaming with .net map reduce api (executing on hdp for windows)</h1>
+<p class="meta">2014-07-28 &middot; Lester Martin</p>
+<p>This blog post is for anyone who would like some help with creating/executing a simple MapReduce job with C# <em>– specifically for use with <a class="external-link" href="http://hortonworks.com/blog/hdp-2-0-windows-ga/" rel="nofollow">HDP for Windows</a></em>.  For my Hadoop instance, I'm using the virtual machine I had fun during my <a href="installing-hdp-on-windows-and-then-running-something-on-it-26935323.html" data-linked-resource-id="26935323" data-linked-resource-version="3" data-linked-resource-type="blogpost">installing hdp on windows (and then running something on it)</a> effort.  As this non-JVM language will ultimately require the use of <a class="external-link" href="http://hadoop.apache.org/docs/r1.2.1/streaming.html" rel="nofollow">Hadoop Streaming</a>, the ultimate goal is to use the <a class="external-link" href="http://hadoopsdk.codeplex.com/" rel="nofollow">Microsoft .NET SDK for Hadoop</a> (specifically the <a class="external-link" href="http://hadoopsdk.codeplex.com/wikipage?title=Map%2fReduce&amp;referringTitle=Home" rel="nofollow">Map/Reduce project</a>) to abstract away from some of the lower-level activities.  So, let's do it!</p><p><div class="toc-macro client-side-toc-macro  conf-macro output-block" data-hasbody="false" data-headerelements="H1,H2,H3,H4,H5,H6,H7" data-macro-id="" data-macro-name="toc"> </div></p><h3 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-DevelopmentEnvironment">Development Environment</h3><p>First up I needed an IDE; remember, I live on my Mac and I prefer to use <a class="external-link" href="http://www.jetbrains.com/idea/" rel="nofollow">IntelliJ</a>.  I downloaded <a class="external-link" href="http://www.visualstudio.com/en-us/products/visual-studio-express-vs.aspx" rel="nofollow">Visual Studio Express</a>; specifically I installed Express 2013 for Windows Desktop.  After creating a new project, I needed to pull in the Hadoop SDK and kudos to NuGet as I was impressed how smooth this has become since the last time I was programming in VS.  The following YouTube video shows you how to do that if it is new to you.</p><p><iframe class="youtube-player conf-macro output-block" data-hasbody="false" data-macro-id="" data-macro-name="widget" frameborder="0" src="//www.youtube.com/embed/uyi41nrhlhw?wmode=opaque" style="width: 400px; height: 300px" type="text/html">
+</iframe>
+    
+</p><p>That video is pretty helpful and if you watched it you should already be feeling pretty good about what you are about to do.  Interestingly enough, it was a MapReduce tutorial and the presenter decided to only show a Map-only job.  Not wrong, but surely interesting.  Don't worry... we're going to do BOTH Map AND Reduce phases!  <img class="emoticon emoticon-wink" data-emoji-id="1f609" data-emoji-shortname=":wink:" data-emoji-fallback="😉" src="images/wink.png" width="16" height="16" data-emoticon-name="wink" alt="(wink)" /></p><p>Actually, we'll need at least three classes since we'll need a class to be the job that kicks off the MapReduce job.  For our use case, we'll go back to Square-1 and implement the old &quot;Word Count&quot; quintessential example.  For anyone not familiar with it, we want to count words in a body of text such as the <a href="/wiki/download/attachments/27328520/shakepoems.txt?version=1&amp;modificationDate=1406518077768&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="27492353" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="shakepoems.txt" data-nice-type="Text File" data-linked-resource-content-type="text/plain" data-linked-resource-container-id="27328520" data-linked-resource-container-version="3">Shakespeare's Sonnets</a>.  <em>Now that we have some test data, <strong>let's get into the code</strong>.</em></p><h3 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-WritingTheCode">Writing The Code</h3><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>These source files can be retrieve from GitHub at <a class="external-link" href="https://github.com/lestermartin/hadoop-exploration/tree/master/src/main/csharp/wordcount" rel="nofollow">https://github.com/lestermartin/hadoop-exploration/tree/master/src/main/csharp/wordcount</a></p></div></div><h4 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-Mapper">Mapper</h4><p>The Hadoop SDK gives us a class called <code>MapperBase</code> that delivers to us a line at a time from the input data along with a <code>MapperContext</code> object that we can use to emit back our 0..n KVPs for the Mapper contract.  The code below show a simple implementation of this activity.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>WordMapper.cs</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">using Microsoft.Hadoop.MapReduce;
+using System;
+using System.Collections.Generic;
+
+namespace HadoopExploration
+{
+    public class WordMapper : MapperBase
+    {
+        public override void Map(string inputLine, MapperContext context)
+        {
+            char[] delimiterChars = { ' ', ',', '.', ':', '\t' };
+            //split up the passed in line
+            string[] individualWords = inputLine.Trim().Split(delimiterChars);
+            //write output KVP for each one of these
+            foreach (string word in individualWords)
+            {
+                context.EmitKeyValue(word.ToLower(), &quot;1&quot;);
+            }
+        }
+    }
+}</pre>
+</div></div><h4 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-Reducer">Reducer</h4><p>Like with the Mapper, we get a helper class with <code>ReducerCombinerBase</code> (for those who already know what a Combiner is, the name tells you all you need to know).  Just like in a Java Reducer class, we are guaranteed to get the full list of values for a particular key coming from all the Mapper instances.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>SumReducer.cs</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">using Microsoft.Hadoop.MapReduce;
+using System;
+using System.Collections.Generic;
+
+namespace HadoopExploration
+{
+    public class SumReducer : ReducerCombinerBase
+    {
+        public override void Reduce(string key, IEnumerable&lt;string&gt; values, ReducerCombinerContext context)
+        {
+            int wordCount = 0;
+            //iterate through the count values passed to us by the mapper
+            foreach (string countAsString in values)
+            {
+                wordCount += Int32.Parse(countAsString);
+            }
+            //write output &quot;answer&quot; as a KVP
+            context.EmitKeyValue(key, Convert.ToString(wordCount));
+        }
+    }
+}</pre>
+</div></div><p>You might have noticed that the helper Mapper and Reducer helper classes were pegged to just using string and do not offer the richer choices you get with Java.  That makes sense considering these are still leveraging Streaming under the covers which is limited to this since it uses stdin and stdout to execute this code.</p><h4 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-Job">Job</h4><p>As you can see with earlier video, content from SDK project, and other search results such as <a class="external-link" href="http://blogs.msdn.com/b/data_otaku/archive/2013/09/07/hadoop-for-net-developers-implementing-a-simple-mapreduce-job.aspx" rel="nofollow">Bryan Smith's tutorial</a>, there is some information out there, but it is all tailored to using HD Insights.  As I said at the top of this post, I wanted to run this locally with HDP for Windows and despite the fact that HD Insights utilizes HDP I had a lot of trouble with this last step.  Here is a mechanism of stitching together the Mapper and Reducer in the context of a Hadoop Job and is the biggest driver for me to write all of this down.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>WordCount.cs</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">using Microsoft.Hadoop.MapReduce;
+using System;
+using System.Collections.Generic;
+
+namespace HadoopExploration
+{
+    class WordCount
+    {
+        static void Main(string[] args)
+        {
+            if (args.Length != 2)
+            {
+                throw new ArgumentException(&quot;Usage: WordCount &lt;input path&gt; &lt;output folder&gt;&quot;);
+            }
+            HadoopJobConfiguration jobConfig = new HadoopJobConfiguration()
+            {
+                InputPath = args[0],
+                OutputFolder = args[1],
+                DeleteOutputFolder = true
+            };
+            Hadoop.Connect().MapReduceJob.Execute&lt;WordMapper, SumReducer&gt;(jobConfig);
+        }
+    }
+}</pre>
+</div></div><p>If you forgot how to add command-line parameters here is a little help.</p><ul><li>Right-click on the project name in the <em>Solution Explorer</em></li><li>Under <em>Application</em> menu item, set <code>HadoopExploration.WordCount</code> as the <em>Startup object</em></li><li>Under <em>Debug</em> menu item, add appropriate <em>Command line arguments</em> in the text box provided</li></ul><h3 id="hadoopstreamingwith.netmapreduceapi(executingonhdpforwindows)-TestItAllOut">Test It All Out</h3><p>Save <a href="/wiki/download/attachments/27328520/TypingTest.txt?version=1&amp;modificationDate=1406518089278&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="27492354" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="TypingTest.txt" data-nice-type="Text File" data-linked-resource-content-type="text/plain" data-linked-resource-container-id="27328520" data-linked-resource-container-version="3">TypingTest.txt</a> (is anyone old enough to remember this little line?) to your computer as a simple test file.  It is just a 1000 copies of this line.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: powershell; gutter: false; theme: Confluence" data-theme="Confluence">Now is the time for all good men to come to the aid of their country.</pre>
+</div></div><p>Put it somewhere in your HDFS home directory. </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: powershell; gutter: false; theme: Confluence" data-theme="Confluence"> PS C:\HDP-Demo\WordCount&gt; ls
+
+     Directory: C:\HDP-Demo\WordCount
+
+Mode                LastWriteTime     Length Name
+----                -------------     ------ ----
+-a---         7/27/2014  11:39 AM      70000 TypingTest.txt
+
+PS C:\HDP-Demo\WordCount&gt; hadoop fs -put TypingTest.txt wordcount/TypingTest.txt
+PS C:\HDP-Demo\WordCount&gt; hadoop fs -ls wordcount
+Found 1 items
+-rw-r--r--   1 lester supergroup      70000 2014-07-27 21:32 /user/lester/wordcount/TypingTest.txt</pre>
+</div></div><p>Run the <code>WordCount</code> class VSE; don't forget to add some command-line parameters such as &quot;<code>wordcount/TypingTest.txt wordcount/mroutput</code>&quot; to get the following output.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">File dependencies to include with job:
+[Auto-detected] C:\Users\lester\Documents\Visual Studio 2013\Projects\HadoopExploration\HadoopExploration\bin\Debug\HadoopExploration.vshost.exe
+[Auto-detected] C:\Users\lester\Documents\Visual Studio 2013\Projects\HadoopExploration\HadoopExploration\bin\Debug\HadoopExploration.exe
+[Auto-detected] C:\Users\lester\Documents\Visual Studio 2013\Projects\HadoopExploration\HadoopExploration\bin\Debug\Microsoft.Hadoop.MapReduce.dll
+[Auto-detected] C:\Users\lester\Documents\Visual Studio 2013\Projects\HadoopExploration\HadoopExploration\bin\Debug\Microsoft.Hadoop.WebClient.dll
+[Auto-detected] C:\Users\lester\Documents\Visual Studio 2013\Projects\HadoopExploration\HadoopExploration\bin\Debug\Newtonsoft.Json.dll
+packageJobJar: [] [/C:/hdp/hadoop/hadoop-1.2.0.1.3.0.0-0380/lib/hadoop-streaming
+.jar] C:\Users\lester\AppData\Local\Temp\streamjob5034462588780810117.jar tmpDir=null
+14/07/27 22:43:29 INFO util.NativeCodeLoader: Loaded the native-hadoop library
+14/07/27 22:43:29 WARN snappy.LoadSnappy: Snappy native library not loaded
+14/07/27 22:43:29 INFO mapred.FileInputFormat: Total input paths to process : 1
+14/07/27 22:43:29 INFO streaming.StreamJob: getLocalDirs(): [c:\hdp\data\hdfs\mapred\local]
+14/07/27 22:43:29 INFO streaming.StreamJob: Running job: job_201407271215_0012
+14/07/27 22:43:29 INFO streaming.StreamJob: To kill this job, run:
+14/07/27 22:43:29 INFO streaming.StreamJob: C:\hdp\hadoop\hadoop-1.2.0.1.3.0.0-0
+380/bin/hadoop job  -Dmapred.job.tracker=HDP13-1NODE:50300 -kill job_201407271215_0012
+14/07/27 22:43:29 INFO streaming.StreamJob: Tracking URL: http://10.0.2.15:50030/jobdetails.jsp?jobid=job_201407271215_0012
+14/07/27 22:43:30 INFO streaming.StreamJob:  map 0%  reduce 0%
+14/07/27 22:43:36 INFO streaming.StreamJob:  map 100%  reduce 0%
+14/07/27 22:43:43 INFO streaming.StreamJob:  map 100%  reduce 33%
+14/07/27 22:43:44 INFO streaming.StreamJob:  map 100%  reduce 100%
+14/07/27 22:43:46 INFO streaming.StreamJob: Job complete: job_201407271215_0012
+14/07/27 22:43:46 INFO streaming.StreamJob: Output: hdfs:///user/lester/wordcount/mroutput</pre>
+</div></div><p>Then you can validate the MapReduce final answers.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: powershell; gutter: false; theme: Confluence" data-theme="Confluence">PS C:\HDP-Demo\WordCount&gt; hadoop fs -ls wordcount
+Found 2 items
+-rw-r--r--   1 lester supergroup      70000 2014-07-27 21:32 /user/lester/wordcount/TypingTest.txt
+drwxr-xr-x   - lester supergroup          0 2014-07-27 22:43 /user/lester/wordcount/mroutput
+PS C:\HDP-Demo\WordCount&gt; hadoop fs -ls wordcount/mroutput
+Found 2 items
+drwxr-xr-x   - lester supergroup          0 2014-07-27 22:43 /user/lester/wordcount/mroutput/_logs
+-rw-r--r--   1 lester supergroup        132 2014-07-27 22:43 /user/lester/wordcount/mroutput/part-00000
+PS C:\HDP-Demo\WordCount&gt; hadoop fs -cat wordcount/mroutput/part-00000
+aid     1000
+all     1000
+come    1000
+country 1000
+for     1000
+good    1000
+is      1000
+men     1000
+now     1000
+of      1000
+the     2000
+their   1000
+time    1000
+to      2000</pre>
+</div></div><p><strong>That's it!  It all works!!</strong>  Now (and just for fun), run it again using <a href="/wiki/download/attachments/27328520/shakepoems.txt?version=1&amp;modificationDate=1406518077768&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="27492353" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="shakepoems.txt" data-nice-type="Text File" data-linked-resource-content-type="text/plain" data-linked-resource-container-id="27328520" data-linked-resource-container-version="3">shakepoems.txt</a> as the input and add a comment to the page letting me know how many times the word &quot;ceremony&quot; shows up.  Also, don't hesitate to share any successes on your own or any questions that may come up from this post.</p>
+</body>
+</html>

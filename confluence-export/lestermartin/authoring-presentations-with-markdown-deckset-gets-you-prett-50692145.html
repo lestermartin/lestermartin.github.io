@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>authoring presentations with markdown (deckset gets you pretty far)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>authoring presentations with markdown (deckset gets you pretty far)</h1>
+<p class="meta">2015-12-09 &middot; Lester Martin</p>
+<p><span class="confluence-embedded-file-wrapper image-left-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-left" height="250" loading="lazy" src="images/markdowntypewriter.jpg" data-unresolved-comment-count="0" data-linked-resource-id="50692146" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="50692145" data-linked-resource-container-version="2" data-media-id="4136301c-ed90-4eb2-9d53-b68aa0ad2cff" data-media-type="file"></span>As I called out in <a href="viewing-diffs-between-powerpoint-decks-with-a-little-help-fr-47644688.html" data-linked-resource-id="47644688" data-linked-resource-version="2" data-linked-resource-type="blogpost">viewing diffs between powerpoint decks (with a little help from adobe)</a>, I'm on a hunt for the ultimate approach to allow multiple folks to edit presentations without having them step on each other's toes and that allows for normal source code control to be applied to the &quot;source&quot; file(s).  <em>Using markdown still seems like the best approach, but <strong>I still haven't found the perfect solution</strong></em>.  <a class="external-link" href="http://www.decksetapp.com/" rel="nofollow">Deckset</a> (a Mac-only app) comes pretty darn close.</p><p>First and foremost, you are authoring the presentation in markdown with your favorite plain-jane text editor, or markdown-centric editor (I'm currently using <a class="external-link" href="https://www.google.com/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=5&amp;cad=rja&amp;uact=8&amp;ved=0ahUKEwj4r6C45s3JAhVISSYKHbPsA8MQFggzMAQ&amp;url=https%3A%2F%2Fitunes.apple.com%2Fus%2Fapp%2Fmdedit%2Fid892303043%3Fmt%3D12&amp;usg=AFQjCNEFhwUlXvyzrf888hOE08VCpMUmOA&amp;sig2=2PUbKo90YVYbq6qN-EmhXg&amp;bvm=bv.109332125,d.eWE" rel="nofollow">MDEdit</a>).  Here's a snippet of what that looks like (taken from <a href="/wiki/download/attachments/50692145/presentation.md?version=1&amp;modificationDate=1449630766777&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="50692143" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="presentation.md" data-linked-resource-content-type="application/octet-stream" data-linked-resource-container-id="50692145" data-linked-resource-container-version="2">presentation.md</a>).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="5497bad7-7570-4379-b17d-c804995dc3ca" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Emacs" data-theme="Emacs"># Programming with Apache Spark
+
+![](Gents.jpg)
+
+^ Est. 45 mins for the slides, plus 30 mins for the lab at the end of the section
+
+^ Spark 1.4.1 Programming Guide; http://spark.apache.org/docs/1.4.1/programming-guide.html 
+
+---
+
+## Learning Objectives
+
+After you complete this lesson you should be able to:
+
+- Start the Spark shell
+- Understand what an RDD is
+- Load data from HDFS and perform a word count
+- Know the differences between Transformation and Action
+- Explain Lazy Evaluation
+
+--- 
+
+## The Resilient Distributed Dataset
+
+An *Immutable* collection of objects (or records) that can be operated in parallel
+
+- **Resilient**: can be created from parent RDDs - An RDD keeps its lineage information
+- **Distributed**: partitions of data are distributed across nodes in the cluster
+- **Dataset**: a set of data that can be accessed
+
+Each RDD is composed of 1 or more partitions - The user can control the number of partitions - More partitions =&gt; More parallelism
+
+--- 
+
+## What Does &quot;Lazy Execution&quot; Mean?
+
+```python
+file = sc.textFile(&quot;hdfs://some-text-file&quot;)
+counts = file.flatMap(lambda line: line.split(&quot; &quot;)) \
+    .map(lambda word: (word,1)) \
+    .reduceByKey(lambda a,b: a+b)
+```
+
+DAG of transformations is built by Spark on driver side
+
+```python
+counts.saveAsTextFile(&quot;hdfs://wordcount-out&quot;)
+```
+
+Action triggers execution of whole DAG</pre>
+</div></div><p>As you can see, this text-only file (and its referenced image files) could quite easily work with something like github to maintain history of who changed what &amp; when <strong>– not to mention allow concurrent development!</strong></p><p>The following brief video shows what this looks like in presentation mode.  It works with multiple monitors and shows presenter notes, just like PowerPoint.</p><p><iframe class="youtube-player conf-macro output-block" data-hasbody="false" data-macro-id="45d22b48-124d-44d8-baee-ae01c661bff9" data-macro-name="widget" frameborder="0" src="//www.youtube.com/embed/LqLxREvyZRg?wmode=opaque" style="width: 400px; height: 300px" type="text/html">
+</iframe>
+    
+</p><p>It can also create a PDF such as this one.</p><p><div class="conf-macro output-block" data-hasbody="false" data-macro-name="viewpdf" data-macro-id="f2b964ec-ead7-4608-babc-4eaa4f5ce0fb"><style>
+    #media-viewer-content_presentation_pdf_bd5791b6-02ba-49fb-8ee5-a2e83ffb813f {
+        height: 650px;
+        width: 95%;
+        position: relative;
+    }
+
+    /* PGXT-4046: Prevent the header from showing for the PDF macro */
+    .conf-macro .cp-header.cp-header-group {
+        display: none;
+    }
+
+    .cp-spinner .cp-spinner-blades div {
+        background: #333;
+    }
+
+</style>
+
+<div class="office-container">
+                <div id="media-viewer-content_presentation_pdf_bd5791b6-02ba-49fb-8ee5-a2e83ffb813f" class="media-viewer-content" data-attachment-name="presentation.pdf" data-filestore-url="https://api.media.atlassian.com/file/9409ce02-d6bd-4c9c-b511-92646ab01d34/artifact/document.pdf/binary?token=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI0MmFhM2Y2My1jMTI2LTRjNDItYjhlMS0zMGY3Y2IwZmU1OGMiLCJhY2Nlc3MiOnsidXJuOmZpbGVzdG9yZTpmaWxlOjk0MDljZTAyLWQ2YmQtNGM5Yy1iNTExLTkyNjQ2YWIwMWQzNCI6WyJyZWFkIl19LCJleHAiOjE3OTM4MzEyMDMsIm5iZiI6MTc5MzgyODIwM30.ccITCrK0aRwHxQHdVsUmq0zGClLzehPnl8zrciaCsi0&amp;client=42aa3f63-c126-4c42-b8e1-30f7cb0fe58c&amp;name=presentation.pdf" data-preview-url="https://martin.atlassian.net/wiki/pages/viewpageattachments.action?pageId=50692145&amp;preview=%2F50692145%2F50692144%2Fpresentation.pdf" data-thumbnail-url="https://api.media.atlassian.com/file/9409ce02-d6bd-4c9c-b511-92646ab01d34/image?token=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI0MmFhM2Y2My1jMTI2LTRjNDItYjhlMS0zMGY3Y2IwZmU1OGMiLCJhY2Nlc3MiOnsidXJuOmZpbGVzdG9yZTpmaWxlOjk0MDljZTAyLWQ2YmQtNGM5Yy1iNTExLTkyNjQ2YWIwMWQzNCI6WyJyZWFkIl19LCJleHAiOjE3OTM4MzEyMDMsIm5iZiI6MTc5MzgyODIwMywiaHR0cHM6Ly9pZC5hdGxhc3NpYW4uY29tL2FwcEFjY3JlZGl0ZWQiOmZhbHNlLCJhdXRoVHlwZSI6InVuYXV0aGVudGljYXRlZCJ9.Z071kXGpJoCEzYCYX1rGMnkj794UBprTS3J_-Mpt1DE&amp;client=42aa3f63-c126-4c42-b8e1-30f7cb0fe58c&amp;name=presentation.pdf"></div>
+    </div>
+</div></p><p>This whole approach gets me pretty far, but has the following list of issues you'd have to accept.</p><ol><li>While you can edit the file on any machine since it is just a plain text (markdown) file, you have to use the Mac software to &quot;drive&quot; it in presentation mode if you want to get the multi-screen mode complete with presenter notes and any builder slides you create.  <em>Fortunately, you can export it to PDF as shown above.</em></li><li>There are limited templates and no current way to develop your own.</li></ol><p>While these limitations will not allow me to push too hard for this solution at my employer, I'm going to see if I can use Deckset for my next user group, or other public, presentation.</p>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>opening up a port on centos 7 firewall (using firewalld)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>opening up a port on centos 7 firewall (using firewalld)</h1>
+<p class="meta">2017-03-02 &middot; Lester Martin</p>
+<p>There I was on an AWS hosted node trying to access port 2181 and 9092 on another AWS node where I just followed the instructions at <a class="external-link" href="http://kafka.apache.org/documentation/#quickstart" rel="nofollow">http://kafka.apache.org/documentation/#quickstart</a> to get a stand-alone instance of Kafka running.  After some exceptions that suggested I could not reach these ports, I fell back to trusty old telnet to verify that was problem.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="cad951cf-35c1-40d4-9427-97266a4640c1" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@ip-172-xxx-xxx-86 kafka]# telnet kafka 22
+Trying 172.xxx.xxx.45...
+Connected to kafka.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_6.6.1
+^C
+Connection closed by foreign host.
+[root@ip-172-xxx-xxx-86 kafka]# 
+[root@ip-172-xxx-xxx-86 kafka]# telnet kafka 2181
+Trying 172.xxx.xxx.45...
+telnet: connect to address 172.xxx.xxx.45: No route to host
+[root@ip-172-xxx-xxx-86 kafka]# </pre>
+</div></div><p>Yep, &quot;no route to host&quot;!!  After double-checking that these two AWS hosts should be able to talk to each other on these ports it seemed logical that the box's firewall might be &quot;helping&quot; me out.  I quickly found out that with CentOS 7, we've moved away from iptables and to firewalld.  Thankfully, <code>man firewall-cmd</code> was there to help me out.  I just needed to add these two ports and the following commands show what the configuration looked like before and after I made these mods.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="3ce9833a-b18a-40a9-8efe-cb6b5d67317d" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# firewall-cmd --info-zone=public
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: eth0
+  sources: 
+  services: dhcpv6-client ssh vnc-server
+  ports: 
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  sourceports: 
+  icmp-blocks: 
+  rich rules: 
+
+
+[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# firewall-cmd --permanent --zone=public --add-port=2181/tcp
+success
+[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# firewall-cmd --permanent --zone=public --add-port=9092/tcp
+success
+[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# firewall-cmd --reload
+success
+[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# firewall-cmd --info-zone=public
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: eth0
+  sources: 
+  services: dhcpv6-client ssh vnc-server
+  ports: 2181/tcp 9092/tcp
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  sourceports: 
+  icmp-blocks: 
+  rich rules: 
+
+[root@ip-172-xxx-xxx-45 kafka_2.11-0.10.1.0]# </pre>
+</div></div><p>Then I was &quot;cooking with bacon&quot; as telnet shows!</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="9d5f6e12-3aad-4b75-a109-69f045443c45" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@ip-172-xxx-xxx-86 ~]# telnet kafka 2181
+Trying 172.xxx.xxx.45...
+Connected to kafka.
+Escape character is '^]'.
+^CConnection closed by foreign host.
+[root@ip-172-xxx-xxx-86 ~]# telnet kafka 9092
+Trying 172.xxx.xxx.45...
+Connected to kafka.
+Escape character is '^]'.
+^CConnection closed by foreign host.
+[root@ip-172-xxx-xxx-86 ~]# </pre>
+</div></div><p>More importantly, I could not connect to this novel Kafka configuration I was using for some testing.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="387981e8-e1dd-43db-819c-d589220900d7" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@ip-172-xxx-xxx-86 kafka]# bin/kafka-console-consumer.sh --zookeeper kafka:2181 --topic lestertester --from-beginning
+Now is the time for all good men to come to the aid of their country.
+ Now is the time for all good men to come to the aid of their country.
+  Now is the time for all good men to come to the aid of their country.
+^CProcessed a total of 3 messages
+[root@ip-172-xxx-xxx-86 kafka]# </pre>
+</div></div><p>Good luck on your use of CentOS 7's firewalld and don't forget to consult your friendly man page as needed.</p>
+</body>
+</html>

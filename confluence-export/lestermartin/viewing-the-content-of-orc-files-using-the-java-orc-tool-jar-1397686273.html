@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viewing the content of ORC files (using the Java ORC tool jar)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>viewing the content of ORC files (using the Java ORC tool jar)</h1>
+<p class="meta">2019-12-12 &middot; Lester Martin</p>
+<p>The <a class="external-link" href="https://orc.apache.org/" rel="nofollow">Apache ORC</a> file format has been used heavily by <a class="external-link" href="http://hive.apache.org/" rel="nofollow">Apache Hive</a> for many years now, but being a bit of a “binary file format” there just isn’t much we can do with basic tools to see the contents of these files as shown below.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="1afa14e8-9a05-44af-9f89-6f1577ef3fdb" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ cat orcfile 
+ORC
+P1
+
+       ???&gt;P&gt;??be!Q%~.ע?d!?????T	?;
+
+
+DoeSmith(P4??be!%..&amp;wG!??       ?
+                                 ??'LesterEricJohnSusie	FdEBR	F6PDoeMartinSmithGATXOKMA???
+??]?M?Ku??????9?sT?#?ްͲ㖆O:^xh?&gt;??FWe?Pve??桿F?Ӳ?LuS????b?`	`??`???/p?_?]C?8???kQf?kpiqf??PB?K
+                  (???쒟
+X?X8X?9X?89.?   Ź?????B&quot;$?b4?`X?$???,??(???????#?????&quot;Ŝ??&quot;Ś????*Ś??KKR??8????
+             ????b??a%???????Z??,?\Z??*????J?q1???s3K2$4??rVB@q..&amp;wG!?? ???????&quot;
+                                                                               (^0??ORC</pre>
+</div></div><p>Fortunately, the ORC project has a couple of options for CLI tools.  For this posting, I settled on the <a class="external-link" href="https://orc.apache.org/docs/java-tools.html" rel="nofollow">Java Tools</a>.  Now, you could be a good citizen and build these yourself from source, but I (the lazy programmer that I am) decided to just download a compiled “uber jar” file.</p><p>First, I needed to figure out which version of ORC I was using.  I am currently using HDP 3.1.0 and I took a peek into the Hive lib folder.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="13975c9c-d611-4ba3-a636-76573a6c1267" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ ls /usr/hdp/current/hive-client/lib/orc*
+/usr/hdp/current/hive-client/lib/orc-core-1.5.1.3.1.0.0-78.jar
+/usr/hdp/current/hive-client/lib/orc-shims-1.5.1.3.1.0.0-78.jar</pre>
+</div></div><p>The HDP jar file naming convention let me know I was using ORC 1.5.1, so I surfed over to <a class="external-link" href="http://repo1.maven.org/maven2/org/apache/orc/orc-tools/1.5.1/" rel="nofollow">http://repo1.maven.org/maven2/org/apache/orc/orc-tools/1.5.1/</a> and then pulled down the appropriate file.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="805b49ae-c4f0-4409-9489-58836306bc74" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">wget https://repo1.maven.org/maven2/org/apache/orc/orc-tools/1.5.1/orc-tools-1.5.1-uber.jar</pre>
+</div></div><p>Now, I’m ready to use the tools, but… I realized I didn’t have an ORC file to test it out with, so I decided I would use <a class="external-link" href="http://pig.apache.org/" rel="nofollow">Apache Pig</a> to build a small file.  I first created a simple CSV file with vi and then pushed it to HDFS.  The contents of the file are as follows.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="5e39e829-cb91-48c1-98f5-ed85854b7739" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -cat pig/customers.csv
+1001,Lester,Martin,GA
+1002,Eric,Martin,TX
+1003,John,Doe,OK
+1004,Susie,Smith,MA</pre>
+</div></div><p>I then wrote a little read &amp; write conversion script and then executed it.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="744195a4-40e3-49aa-98c8-797a33708919" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ cat createORC.pig 
+custs = LOAD 'pig/customers.csv' USING PigStorage(',')
+          AS (cid:int, fname:chararray, lname:chararray, state:chararray);
+STORE custs INTO 'orcfile' USING OrcStorage;
+$ pig createORC.pig</pre>
+</div></div><p>As expected, it created a simple little ORC file which I pulled down to my linux home directory.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="ee0817c9-ab6d-4dd9-88b8-d22a25445d2e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls orcfile
+Found 2 items
+-rw-r--r--   3 zeppelin hdfs          0 2019-12-12 08:35 orcfile/_SUCCESS
+-rw-r--r--   3 zeppelin hdfs        569 2019-12-12 08:35 orcfile/part-v000-o000-r-00000
+$ hdfs dfs -get orcfile/part-v000-o000-r-00000 orcfile
+$ ls -l orcf*
+-rw-r--r--. 1 zeppelin hadoop 569 Dec 12 08:36 orcfile</pre>
+</div></div><p>NOW, we can finally try out the ORC Tools jar.  First up, we can look at the metadata of this file.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="f1ddee24-3a24-420d-b58f-55bcd2beb7e6" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ java -jar orc-tools-1.5.1-uber.jar meta orcfile
+Processing data file orcfile [length: 569]
+Structure for orcfile
+File Version: 0.12 with ORC_135
+Rows: 4
+Compression: ZLIB
+Compression size: 262144
+Type: struct&lt;cid:int,fname:string,lname:string,state:string&gt;
+
+**** REMOVED CONTENT FROM THESE SECTIONS FOR BREVITY ****
+Stripe Statistics:
+File Statistics:
+Stripes:
+
+File length: 569 bytes
+Padding length: 0 bytes
+Padding ratio: 0%</pre>
+</div></div><p>That had some interesting info (and I definitely deleted a bunch to not be so verbose), but what this post was really about all this time is to show the contents of the file, so we just switch the subcommand.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="993b7b9b-d3a3-4a0d-82f5-8a3099b4342b" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">$ java -jar orc-tools-1.5.1-uber.jar data orcfile
+Processing data file orcfile [length: 569]
+{&quot;cid&quot;:1001,&quot;fname&quot;:&quot;Lester&quot;,&quot;lname&quot;:&quot;Martin&quot;,&quot;state&quot;:&quot;GA&quot;}
+{&quot;cid&quot;:1002,&quot;fname&quot;:&quot;Eric&quot;,&quot;lname&quot;:&quot;Martin&quot;,&quot;state&quot;:&quot;TX&quot;}
+{&quot;cid&quot;:1003,&quot;fname&quot;:&quot;John&quot;,&quot;lname&quot;:&quot;Doe&quot;,&quot;state&quot;:&quot;OK&quot;}
+{&quot;cid&quot;:1004,&quot;fname&quot;:&quot;Susie&quot;,&quot;lname&quot;:&quot;Smith&quot;,&quot;state&quot;:&quot;MA&quot;}</pre>
+</div></div><p>Perfect, we can see the four rows represented as JSON documents which is so much easier to read than that stuff we started out with originally.</p>
+</body>
+</html>

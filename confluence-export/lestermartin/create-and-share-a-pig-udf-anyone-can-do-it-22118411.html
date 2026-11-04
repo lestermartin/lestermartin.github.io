@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>create and share a pig udf (anyone can do it)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>create and share a pig udf (anyone can do it)</h1>
+<p class="meta">2014-03-29 &middot; Lester Martin</p>
+<p><span class="confluence-embedded-file-wrapper image-right-wrapper"><img class="confluence-embedded-image image-right" loading="lazy" src="images/apache_pig.png" data-unresolved-comment-count="0" data-linked-resource-id="22315016" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22118411" data-linked-resource-container-version="6" data-media-id="ec5d0cb1-a0e2-4a54-9547-08c89a8df74b" data-media-type="file"></span></p><p>The Apache Pig project's <a class="external-link" href="http://pig.apache.org/docs/r0.12.0/udf.html" rel="nofollow">User Defined Functions</a> gives a pretty good overview of how to create a UDF.  <em>In fact,</em> I stole my simple UDF from there.  For Pig UDF's the obligitory <em>&quot;Hello World&quot; program</em> is actually a &quot;Convert to Upper Case&quot; function.  For this effort, I'm using the <a class="external-link" href="http://hortonworks.com/products/hortonworks-sandbox/" rel="nofollow">Hortonworks Sandbox</a> (version 2.0).  Once you have that setup operational, follow along and we'll get your first UDF created and placed on HDFS where others can easily share it. </p><p>Follow the Sandbox's instructions to log into the VM (<code>root</code>'s password is <code>hadoop</code>), but then switch user to <code>hue</code> (<em>bonus points for why this is really a bad idea)</em> before opening up a new file called <code>UPPER.java</code>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hw10653:~ lmartin$ ssh root@127.0.0.1 -p 2222
+root@127.0.0.1's password: 
+Last login: Fri Mar 28 21:34:47 2014 from 10.0.2.2
+[root@sandbox ~]# su hue
+[hue@sandbox root]$ cd ~
+[hue@sandbox ~]$ mkdir exampleudf
+[hue@sandbox ~]$ cd exampleudf
+[hue@sandbox exampleudf]$ vi UPPER.java</pre>
+</div></div><p>Paste in the following code to the vi editor.  <em>If you <strong>&quot;forgot&quot;</strong> how,</em> just type <code>i</code> to pop into <code>i</code>nsert mode and then paste the stuff from below (and... if you needed that little hint, then bang the ESC key a couple of times and then type <code>:wq</code> and press ENTER to <code>w</code>rite the file and <code>q</code>uit vi <em>– <a class="external-link" href="http://lmgtfy.com/?q=vi+cheat+sheet" rel="nofollow">google for a good vi cheat sheet</a></em><em> if needed</em>).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>UPPER.java</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">package exampleudf;
+
+import java.io.IOException;
+import org.apache.pig.EvalFunc;
+import org.apache.pig.data.Tuple;
+
+public class UPPER extends EvalFunc&lt;String&gt;
+{
+   public String exec(Tuple input) throws IOException {
+      if(input == null || input.size() == 0 || input.get(0) == null)
+         return null;
+      try {
+         String str = (String)input.get(0);
+         return str.toUpperCase();
+      } catch(Exception e) {
+         throw new IOException(&quot;Caught exception processing input row &quot;, e);
+      }
+   }
+}
+</pre>
+</div></div><p>As you are starting to see, the goal is to create a SIMPLE User-Defined Function.  This will give you a strawman that you can build your own slick new function on top of.  That, or pay some decent Java Hadoop programmer to do it for you <em>– heck, I'm not allergic to a little moonlighting</em>.  <img class="emoticon emoticon-wink" data-emoji-id="1f609" data-emoji-shortname=":wink:" data-emoji-fallback="😉" src="images/wink.png" width="16" height="16" data-emoticon-name="wink" alt="(wink)" /></p><p>Then just compile the class and jar it up (your jdk and pig version numbers might vary slightly).  If you have trouble compiling/jaring it, <em>or don't even want to try</em>, then just download <a href="/wiki/download/attachments/22118411/exampleudf.jar?version=1&amp;modificationDate=1396080236066&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="22315014" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="exampleudf.jar" data-nice-type="Java Archive" data-linked-resource-content-type="application/java-archive" data-linked-resource-container-id="22118411" data-linked-resource-container-version="6">exampleudf.jar</a><span class="confluence-link"> </span>directly and load it into the directory described further down in the post.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hue@sandbox exampleudf]$ /usr/jdk64/jdk1.6.0_31/bin/javac -cp /usr/lib/pig/pig-0.12.0.2.0.6.0-76.jar UPPER.java 
+[hue@sandbox exampleudf]$ cd ..
+[hue@sandbox ~]$ /usr/jdk64/jdk1.6.0_31/bin/jar -cf exampleudf.jar exampleudf
+[hue@sandbox ~]$ ls -l *.jar
+-rw-rw-r-- 1 hue hue 1534 Mar 29 00:54 exampleudf.jar</pre>
+</div></div><p>Now that we've got it created let's share it.  The best way to make it accessible to everyone is to put the jar file on HDFS itself.  Since we are using the Sandbox, we could just use Hue, but <strong>everything is always more fun at the command line</strong>. </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hue@sandbox ~]$ hadoop fs -mkdir shared
+[hue@sandbox ~]$ hadoop fs -mkdir shared/pig
+[hue@sandbox ~]$ hadoop fs -mkdir shared/pig/udfs
+[hue@sandbox ~]$ ls -l *.jar
+-rw-rw-r-- 1 hue hue 1534 Mar 29 00:54 exampleudf.jar
+[hue@sandbox ~]$ hadoop fs -put exampleudf.jar shared/pig/udfs/exampleudf.jar
+[hue@sandbox ~]$ hadoop fs -ls /user/hue/shared/pig/udfs
+Found 1 items
+-rw-r--r--   3 hue hue       1534 2014-03-29 00:59 /user/hue/shared/pig/udfs/exampleudf.jar</pre>
+</div></div><p>If all went well you should be able to see that file via Hue's File Browser.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/fileBrowserUDF.png" data-unresolved-comment-count="0" data-linked-resource-id="22315009" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22118411" data-linked-resource-container-version="6" data-media-id="31f8afe9-7711-4659-af20-c0373c1d8ddd" data-media-type="file"></span></p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>For this compiled UDF library to be accessible for everyone, the jar file needs to have its HDFS permissions set to allow read rights for all users.</p></div></div><p>Now, create a file (example: <a href="/wiki/download/attachments/22118411/typingText.txt?version=1&amp;modificationDate=1396073556255&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="22315011" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="typingText.txt" data-nice-type="Text File" data-linked-resource-content-type="text/plain" data-linked-resource-container-id="22118411" data-linked-resource-container-version="6">typingText.txt</a>) with some random text such and get it into HDFS as shown below.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/typingText.png" data-unresolved-comment-count="0" data-linked-resource-id="22315012" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22118411" data-linked-resource-container-version="6" data-media-id="700c62fe-ed3c-4297-95ea-18ca00bb4f22" data-media-type="file"></span></p><p>Next up; write a simple Pig script that will register the UDF jar file from HDFS and then use to turn all the words into upper-case.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>test-UPPER.pig</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">REGISTER 'hdfs:///user/hue/shared/pig/udfs/exampleudf.jar';
+DEFINE SIMPLEUPPER exampleudf.UPPER();
+
+typing_line = LOAD '/user/hue/testData/typingText.txt' AS (row:chararray);
+
+upper_typing_line = FOREACH typing_line GENERATE SIMPLEUPPER(row);
+
+DUMP upper_typing_line;</pre>
+</div></div><p>The logical thing would be to use the Pig UI component of Hue to run this super simple function, but <strong><em>I simply cannot figure out why it complains with the following error each time.</em></strong></p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">2014-03-29 01:15:19,712 [main] ERROR org.apache.pig.tools.grunt.Grunt - ERROR 2999: Unexpected internal error. Pathname /tmp/udfs/'hdfs:/user/hue/shared/pig/udfs/exampleudf.jar' from hdfs://sandbox.hortonworks.com:8020/tmp/udfs/'hdfs:/user/hue/shared/pig/udfs/exampleudf.jar' is not a valid DFS filename.</pre>
+</div></div><p>I simply could NOT work past this error and decided to do what everyone should do when something doesn't work <em>(more bonus points if you can get it to work in Hue's Pig UI) – </em>I made the problem simpler.  <strong>I went back to my trusty old friend, the command-line interface (CLI).</strong></p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hue@sandbox ~]$ pig test-UPPER.pig
+2014-03-29 01:20:40,579 [main] INFO  org.apache.pig.Main - Apache Pig version 0.12.0.2.0.6.0-76 (rexported) compiled Oct 17 2013, 20:44:07
+2014-03-29 01:20:40,580 [main] INFO  org.apache.pig.Main - Logging error messages to: /usr/lib/hue/pig_1396081240577.log
+
+... LOTS of lines removed ...
+
+2014-03-29 01:21:12,501 [main] INFO  org.apache.hadoop.mapreduce.lib.input.FileInputFormat - Total input paths to process : 1
+2014-03-29 01:21:12,502 [main] INFO  org.apache.pig.backend.hadoop.executionengine.util.MapRedUtil - Total input paths to process : 1
+(NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COUNTRY.)
+( NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COUNTRY)
+(. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COUNTR)
+(Y. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COUNT)
+(RY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COUN)
+(TRY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR COU)
+(NTRY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR CO)
+(UNTRY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR C)
+(OUNTRY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR )
+(COUNTRY. NOW IS THE TIME FOR ALL GOOD MEN TO COME TO THE AID OF THEIR)</pre>
+</div></div><p><strong>It worked!  You did it!!  Everything has been CAPITALIZED!!!  Congratulations!!!!</strong></p>
+</body>
+</html>

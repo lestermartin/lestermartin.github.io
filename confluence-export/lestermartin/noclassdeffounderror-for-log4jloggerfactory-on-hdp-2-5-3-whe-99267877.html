@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoClassDefFoundError for Log4jLoggerFactory on hdp 2.5.3 when running the KafkaSpout in your topology? (how&#x27;s that for a title?)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>NoClassDefFoundError for Log4jLoggerFactory on hdp 2.5.3 when running the KafkaSpout in your topology? (how&#x27;s that for a title?)</h1>
+<p class="meta">2017-03-10 &middot; Lester Martin</p>
+<div class="confluence-information-macro confluence-information-macro-note conf-macro output-block" data-hasbody="true" data-macro-id="f7049e9b-c69b-45bd-a86f-d4e915f4e7bc" data-macro-name="note"><p class="title">Ephemeral Issue</p><span class="aui-icon aui-icon-small aui-iconfont-warning confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>NOTE: This is a corner-case blog post and really only useful for those who find this entry from a very specific Google search!!  Additionally, I'm filing a support case and expect the problem to be resolved long before it becomes a big issue for many.  But... there are those of us on the latest-greatest version and get to find this stuff out.  ;-)</p></div></div><h1 id="NoClassDefFoundErrorforLog4jLoggerFactoryonhdp2.5.3whenrunningtheKafkaSpoutinyourtopology?(how&#39;sthatforatitle?)-TheProblem(inanutshell)">The Problem (in a nutshell)</h1><p>Storm in HDP 2.5.3 brings in version 1.6.6 of org.slf4j:log4j-over-slf4j instead of the required version 1.7.21.</p><h1 id="NoClassDefFoundErrorforLog4jLoggerFactoryonhdp2.5.3whenrunningtheKafkaSpoutinyourtopology?(how&#39;sthatforatitle?)-TheBackdrop">The Backdrop</h1><p>I'm running a Storm topology that uses storm-kafka and I run into the following error when running on HDP 2.5.3.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="17b3cf9e-c210-4f84-9308-667e567d1f59" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">8487 [Thread-22-kafka-spout-executor[5 5]] ERROR o.a.s.util - Async loop died!
+java.lang.NoClassDefFoundError: Could not initialize class org.apache.log4j.Log4jLoggerFactory
+    at org.apache.log4j.Logger.getLogger(Logger.java:39) ~[log4j-over-slf4j-1.6.6.jar:1.6.6]
+    at kafka.utils.Logging$class.logger(Logging.scala:24) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.consumer.SimpleConsumer.logger$lzycompute(SimpleConsumer.scala:38) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.consumer.SimpleConsumer.logger(SimpleConsumer.scala:38) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.utils.Logging$class.info(Logging.scala:75) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.consumer.SimpleConsumer.info(SimpleConsumer.scala:38) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.consumer.SimpleConsumer.liftedTree1$1(SimpleConsumer.scala:110) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]  
+    at kafka.consumer.SimpleConsumer.kafka$consumer$SimpleConsumer$$sendRequest(SimpleConsumer.scala:99) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.consumer.SimpleConsumer.getOffsetsBefore(SimpleConsumer.scala:165) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at kafka.javaapi.consumer.SimpleConsumer.getOffsetsBefore(SimpleConsumer.scala:86) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.kafka.KafkaUtils.getOffset(KafkaUtils.java:81) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.kafka.KafkaUtils.getOffset(KafkaUtils.java:71) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.kafka.PartitionManager.&lt;init&gt;(PartitionManager.java:103) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.kafka.ZkCoordinator.refresh(ZkCoordinator.java:98) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]  
+    at org.apache.storm.kafka.ZkCoordinator.getMyManagedPartitions(ZkCoordinator.java:69) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.kafka.KafkaSpout.nextTuple(KafkaSpout.java:130) ~[cb1921bc05d611e7b83302d162ad3913.jar:?]
+    at org.apache.storm.daemon.executor$fn__6505$fn__6520$fn__6551.invoke(executor.clj:651) ~[storm-core-1.0.1.2.5.3.0-37.jar:1.0.1.2.5.3.0-37]
+    at org.apache.storm.util$async_loop$fn__554.invoke(util.clj:484) [storm-core-1.0.1.2.5.3.0-37.jar:1.0.1.2.5.3.0-37]
+    at clojure.lang.AFn.run(AFn.java:22) [clojure-1.7.0.jar:?]
+    at java.lang.Thread.run(Thread.java:745) [?:1.8.0_121]</pre>
+</div></div><p>A fellow Hortonworker, <a class="external-link" href="https://community.hortonworks.com/users/14221/ambudsharma.html" rel="nofollow">Ambud Sharma</a>, helped me diagnosis this <em>(ok... <strong>HE diagnosed this</strong> and I watched the master walk the maven dependency graph!)</em> and it seems that ultimately I need version 1.7.21 (not the 1.6.6 ver identified in the stack trace above) of org.slf4j:log4j-over-slf4j which I tried to include in my project by adding the following to my pom.xml dependencies.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="8321fde6-8fdf-4e38-921a-c411b7b8085d" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: xml; gutter: false; theme: Emacs" data-theme="Emacs">        &lt;dependency&gt;
+            &lt;groupId&gt;org.slf4j&lt;/groupId&gt;
+            &lt;artifactId&gt;log4j-over-slf4j&lt;/artifactId&gt;
+            &lt;version&gt;1.7.21&lt;/version&gt;
+            &lt;scope&gt;compile&lt;/scope&gt;
+        &lt;/dependency&gt;</pre>
+</div></div><p>Unfortunately, we determined that the storm-core module for HDP 2.5.3 includes 1.6.6 of this jar as seen in the (modified) ls output below.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="27130f79-9ff2-4ba2-bf27-875aadc26d51" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@ip-172-xxx-xxx-95 ~]# ls /usr/hdp/current/storm-supervisor/lib/
+log4j-over-slf4j-1.6.6.jar     ... deleted everything else for brevity ...</pre>
+</div></div><p>I replaced this jar with log4j-over-slf4j-1.7.21.jar and my topology runs fine.</p>
+</body>
+</html>

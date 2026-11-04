@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>why spark&#x27;s mapPartitions transformation is faster than map (calls your function once/partition, not once/element)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>why spark&#x27;s mapPartitions transformation is faster than map (calls your function once/partition, not once/element)</h1>
+<p class="meta">2016-05-19 &middot; Lester Martin</p>
+<p>I'm writing this blog post for those learning Spark's RDD programming model and who might have heard that using the <code>mapPartitions()</code> transformation is usually faster than its <code>map()</code> brethren and wondered why. <strong> If in doubt... RTFM</strong>, which brought me to the following excerpt from <a class="external-link" href="http://spark.apache.org/docs/latest/programming-guide.html" rel="nofollow">http://spark.apache.org/docs/latest/programming-guide.html</a>.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/map.png" data-unresolved-comment-count="0" data-linked-resource-id="67043330" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="67043332" data-linked-resource-container-version="10" data-media-id="2895e56b-278f-435d-b500-bbfebe3bb200" data-media-type="file"></span><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="images/mapPartition.png" data-unresolved-comment-count="0" data-linked-resource-id="67043331" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="67043332" data-linked-resource-container-version="10" data-media-id="567c9071-ef4a-4855-ba1c-fbb1ba4c6cec" data-media-type="file"></span></p><p>The good news is that the answer is right there.  It just might not be as apparent for those from Missouri <em>(you know... the &quot;Show Me State&quot;)</em> and almost all of us can benefit from a working example.  If you're almost there from reading the description above then <a class="external-link" href="https://bzhangusc.wordpress.com/2014/06/19/optimize-map-performamce-with-mappartitions/" rel="nofollow">https://bzhangusc.wordpress.com/2014/06/19/optimize-map-performamce-with-mappartitions/</a> might just push you over the &quot;aha&quot; moment.  It worked for me, but I wanted to build a fresh example all on my own which I'll try to document well enough for you to review and even recreate if you like.</p><p>If you made it this far then you know that Spark's Resilient Distributed Dataset (RDD) is a partitioned beast all its own somewhat similar to how HDFS breaks files up into blocks.  In fact, when we load a file in Spark from HDFS by default the number of RDD partitions is the same as the number of HDFS blocks.  <em>You can set the number of partitions you want for the RDD (I'm breaking my example into three) and that itself is a topic for another, even bigger, discussion.</em>  If you are still with me then you probably know that &quot;narrow&quot; transformations/tasks happen independently on each of the partitions.  Therefore, the well-used <code>map()</code> function is working in parallel on each of the RDD's partition that it is walking through.</p><p>That's good news <strong>– in fact, that's great news as these narrow tasks are key to performance! </strong> The sister <code>mapPartitions()</code> transformation also works independently on the partitions; so what's so special that makes it run better in most cases?  Well... it comes down to the fact that <u><em><code>map()</code></em> <em>exercises the function being utilized<strong> at a per element level</strong> while <code>mapPartitions()</code> exercises the function <strong>at the partition level</strong></em></u>.  What does that mean in practice? </p><p>It means that if we have 100K elements in a particular RDD partition then we will fire off the function being used by the mapping transformation 100K times when we use <code>map()</code>.  Conversely, if we use <code>mapPartitions()</code> then we will only call the particular function one time, but we will pass in all 100K records and get back all responses in one function call.</p><p>That means, we could get a big lift in the fact that we aren't exercising the particular function so many times, especially if the function is doing something expensive each time that it wouldn't need to do if we passed in all the elements at once.</p><p><em>Hmmm... if that doesn't make immediate sense, let's do some housekeeping for our example and then circle-back to this thought.</em></p><p>This next little bit simple loads up a timeless Dr Suess story into an RDD that then gets transformed into another RDD with a single word for each element.  I'll explain more in a bit, but let's also cache this RDD into memory to aid our ultimate test later in the blog.</p><p>For my testing, I used version 2.4 of the <a class="external-link" href="http://hortonworks.com/products/sandbox/" rel="nofollow">Hortonworks Sandbox</a>.  Once you get this started up, SSH into the machine as <code>root</code>, but then switch to the <code>mktg1</code> user who has a local linux account as well as an HDFS home directory.  <em>If you want to use a brand-new user, try my <a href="simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135.html" data-linked-resource-id="33456135" data-linked-resource-version="5" data-linked-resource-type="blogpost">simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</a> process.</em>  Once there, you can copy the contents of <a href="/wiki/download/attachments/67043332/GreenEggsAndHam.txt?version=1&amp;modificationDate=1463704846383&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="67043338" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="GreenEggsAndHam.txt" data-nice-type="Text File" data-linked-resource-content-type="text/plain" data-linked-resource-container-id="67043332" data-linked-resource-container-version="10">GreenEggsAndHam.txt</a> onto your clipboard and paste it into the vi editor<em> (just type &quot;i&quot; once vi starts and paste from your clipboard, then end it all by hitting ESC twice and typing &quot;:&quot; to get the command prompt and &quot;wq&quot; to write &amp; quit the editor)</em> and then copy that file into HDFS.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0ac1778c-4c4b-465f-8855-2d0902bdfe3f" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">HW10653-2:~ lmartin$ ssh root@127.0.0.1 -p 2222
+root@127.0.0.1's password: 
+Last login: Thu May 19 22:04:06 2016 from 10.0.2.2
+[root@sandbox ~]# su - mktg1
+[mktg1@sandbox ~]$ vi GreenEggsAndHam.txt
+[mktg1@sandbox ~]$ hdfs dfs -put GreenEggsAndHam.txt 
+[mktg1@sandbox ~]$ hdfs dfs -ls 
+Found 1 items
+-rw-r--r--   3 mktg1 hdfs       3478 2016-05-19 22:13 GreenEggsAndHam.txt</pre>
+</div></div><p>Then let's start-up the Spark shell.  NOTE: Like in the following capture, I'm eliminating a lot of &quot;noise&quot; to keep us focused on the important stuff.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="e32e76f7-d2da-4a62-8e28-1743fe189a8a" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[mktg1@sandbox ~]$ spark-shell
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /___/ .__/\_,_/_/ /_/\_\   version 1.6.0
+      /_/
+
+Using Scala version 2.10.5 (OpenJDK 64-Bit Server VM, Java 1.7.0_95)
+Type in expressions to have them evaluated.
+Type :help for more information.
+SQL context available as sqlContext.
+
+scala&gt; </pre>
+</div></div><p>As described earlier, now we load up the Dr Suess story into an RDD that then gets split into another RDD of a single word per element.  Let's also cache it to establish a baseline of simply reading through the RDD so that we don't introduce any additional variability in our comparison testing.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="4455a333-f7d9-4440-8dbb-9d849564a430" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">scala&gt; val wordsRdd = sc.textFile(&quot;GreenEggsAndHam.txt&quot;, 3).flatMap(line =&gt; line.split(&quot; &quot;))
+wordsRdd: org.apache.spark.rdd.RDD[String] = MapPartitionsRDD[2] at flatMap at &lt;console&gt;:27
+
+scala&gt; wordsRdd.persist() //mark it as cached
+res0: wordsRdd.type = MapPartitionsRDD[2] at flatMap at &lt;console&gt;:27
+
+scala&gt; sc.setLogLevel(&quot;INFO&quot;)  //enable timing messages
+
+scala&gt; wordsRdd.take(3)   //trigger cache load
+16/05/19 23:08:22 INFO DAGScheduler: Job 0 finished: take at &lt;console&gt;:30, took 0.565019 s
+res2: Array[String] = Array(I, am, Daniel)</pre>
+</div></div><p>Just to verify that the cache is helping performance (was 0.565 secs above), let's hit it a few more times to see a must faster and consistent response.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="c5593da8-952c-4e63-961f-8fe28a1a91e7" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">scala&gt; wordsRdd.take(3)
+16/05/19 23:11:12 INFO DAGScheduler: Job 1 finished: take at &lt;console&gt;:30, took 0.044692 s
+res3: Array[String] = Array(I, am, Daniel)
+
+scala&gt; wordsRdd.take(3)
+16/05/19 23:11:14 INFO DAGScheduler: Job 2 finished: take at &lt;console&gt;:30, took 0.020183 s
+res4: Array[String] = Array(I, am, Daniel)
+
+scala&gt; wordsRdd.take(3)
+16/05/19 23:11:17 INFO DAGScheduler: Job 3 finished: take at &lt;console&gt;:30, took 0.033659 s
+res5: Array[String] = Array(I, am, Daniel)</pre>
+</div></div><p>Now that we got an order of magnitude speed improvement, and somewhat consistent response times, <strong>we are ready to stand up a test harness to prove that <code>mapPartitions()</code> is faster than <code>map()</code> when the function we are calling produces negative results when call once per record instead of once per partition</strong>.  The <code>wrapSingleWord()</code> function is just going to add &quot;&gt;&gt;&quot; before each word in the RDD and slap on &quot;&lt;&lt;&quot; on the backside.  And to really make the point, I've snuck in a bogus function that burns 10 millis of clock time for each function call which is my simulation of some arbitrary expensive operation.  Just paste in the following functions separately in the shell.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="50653e54-7e08-4b9d-9f07-80921ddf71cc" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: scala; gutter: false; theme: Emacs" data-theme="Emacs">def simulateExpensiveObjectCreation() {
+  Thread sleep 10
+}
+
+def wrapSingleWord(original: String) : String = {
+  simulateExpensiveObjectCreation()
+  val sb = new StringBuilder()
+  return sb.append(&quot;&gt;&gt;&quot;).append(original).append(&quot;&lt;&lt;&quot;).toString()
+}</pre>
+</div></div><p>Next up, let's run our RDD through a <code>map()</code> transformation and get a feel of the timing it takes to exercise this model where the <code>wrapSingleWord()</code> function gets call for each word in the RDD.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0a5e9358-289e-4f44-88cb-c818d8fa3314" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">scala&gt; wordsRdd.map(word =&gt; wrapSingleWord(word)).take(10)
+16/05/20 00:18:46 INFO DAGScheduler: Job 7 finished: take at &lt;console&gt;:34, took 0.151721 s
+res9: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)
+
+scala&gt; wordsRdd.map(word =&gt; wrapSingleWord(word)).take(10)
+16/05/20 00:18:52 INFO DAGScheduler: Job 8 finished: take at &lt;console&gt;:34, took 0.146428 s
+res10: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)
+
+scala&gt; wordsRdd.map(word =&gt; wrapSingleWord(word)).take(10)
+16/05/20 00:18:54 INFO DAGScheduler: Job 9 finished: take at &lt;console&gt;:34, took 0.153416 s
+res11: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)</pre>
+</div></div><div class="confluence-information-macro confluence-information-macro-tip conf-macro output-block" data-hasbody="true" data-macro-id="7913044c-4ced-490b-b2b1-132cd5a82e1a" data-macro-name="tip"><span class="aui-icon aui-icon-small aui-iconfont-approve confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>Remember, <code>wordsRdd.map(wrapSingleWord)</code> could be used as shorthand for <code>wordsRdd.map(word =&gt; wrapSingleWord(word))</code> since the function takes in the entire RDD element.</p></div></div><p>In this tightly constrained Sandbox cluster, we are seeing about 0.15 secs to execute this completely.  Now, to get <code>mapPartitions()</code> to work we need another function that does the same thing, but it has to allow the whole collection of elements to be passed into the function and it needs to return a whole collection on the way back.  The following is just a jazzed up version of the earlier function.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="40465345-c621-40ee-b81a-dd96b064f8fc" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: scala; gutter: false; theme: Emacs" data-theme="Emacs">import java.util._
+import scala.collection.JavaConversions._
+
+def wrapMultiWords(words: Iterator[String]) : Iterator[String] = {
+ simulateExpensiveObjectCreation()
+  val sb = new StringBuilder()
+  val wList = new ArrayList[String]()
+  while( words.hasNext ) {
+    sb.setLength(0)
+    wList.add( sb.append(&quot;&gt;&gt;&quot;).append(words.next()).append(&quot;&lt;&lt;&quot;).toString() )
+  }
+  return wList.iterator()
+}</pre>
+</div></div><p>After you get that added into the shell we can exercise it to see how it compares.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="d1ce66b6-0233-448e-bf45-f780cda29e2e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">scala&gt; wordsRdd.mapPartitions(word =&gt; wrapMultiWords(word)).take(10)
+16/05/20 00:25:51 INFO DAGScheduler: Job 10 finished: take at &lt;console&gt;:40, took 0.069876 s
+res12: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)
+
+scala&gt; wordsRdd.mapPartitions(word =&gt; wrapMultiWords(word)).take(10)
+16/05/20 00:26:04 INFO DAGScheduler: Job 11 finished: take at &lt;console&gt;:40, took 0.050593 s
+res13: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)
+
+scala&gt; wordsRdd.mapPartitions(word =&gt; wrapMultiWords(word)).take(10)
+16/05/20 00:26:07 INFO DAGScheduler: Job 12 finished: take at &lt;console&gt;:40, took 0.055201 s
+res14: Array[String] = Array(&gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Daniel&lt;&lt;, &gt;&gt;&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;Sam&lt;&lt;, &gt;&gt;I&lt;&lt;, &gt;&gt;am&lt;&lt;)</pre>
+</div></div><p>As you can see, the new RDD has the same data, but the performance was dramatically better finishing in about a third of the time in this testing scenario.  <em>Obviously, you'll need to do some testing with your own data and the functions that are being used in the mapping transformations</em>, but <strong>if you do have any measurable difference in calling the related function, it will surely surface when you have to call it over and over again</strong>.  While Spark is not necessarily Hadoop, the need to POC your particular problem and validate your hypothesis is just as important in this space.  With that, <strong><u>you will likely see improvements by moving from map() to mapPartitions() when your related function can process all the elements at once</u></strong>.</p>
+</body>
+</html>

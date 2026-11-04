@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hadoop superuser (you can have more than &#x27;hdfs&#x27;)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>hadoop superuser (you can have more than &#x27;hdfs&#x27;)</h1>
+<p class="meta">2014-08-13 &middot; Lester Martin</p>
+<div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="800d3284-32f9-486b-8402-eff16d5eb60e" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p><a href="https://martin.atlassian.net/wiki/pages/diffpagesbyversion.action?pageId=27885570&amp;selectedPageVersions=10&amp;selectedPageVersions=9" rel="nofollow">These corrections</a> were made on 9/2/2015 to this blog posting.</p></div></div><p><strong><em>So... time to eat some crow. </em></strong> I had a customer who is automating their user onboarding process for his Hadoop cluster and wanted to know if he could use a linux account besides <code>hdfs</code> to create a HDFS user home directory and set the appropriate permissions <em>– see <a href="simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135.html" data-linked-resource-id="33456135" data-linked-resource-version="5" data-linked-resource-type="blogpost">simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</a></em><span class="confluence-link"> </span>.  I told him he was out of luck and that was just the way it was going to be.</p><p>Thinking about it a bit later, I realized I actually never ran this one down.  Navigating through the <a class="external-link" href="http://hadoop.apache.org/" rel="nofollow">Hadoop site</a> got me to <a class="external-link" href="http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#The_Super-User" rel="nofollow">http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#The_Super-User</a> which told me what I've been espousing all along; the user that starts up the NameNode (NN) is the superuser.  Then I saw it – the phrase that let me know I was wrong in my reply...</p><p style="margin-left: 30.0px;"><em><span class="legacy-color-text-default">In addition, the administrator may identify a distinguished group using a configuration parameter. If set, members of this group are also super-users.</span></em></p><p>Doh!  I was definitely wrong in my thinking and reply to my customer.  Hey, <strong>only the second time this month</strong>, but we have half a month to go!!</p><p>Let's see this in action.  First, we need a test bed to work from.  Let's use <code>hdfs</code> to create a test directory and then lock down the permissions to only the <code>hdfs</code> user.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="8bc1e0b2-e3ed-47af-9581-3ccacfed9ee3" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@sandbox ~]# su hdfs 
+[hdfs@sandbox root]$ hdfs dfs -mkdir /testSuperUser
+[hdfs@sandbox root]$ hdfs dfs -mkdir /testSuperUser/testDirectory
+[hdfs@sandbox root]$ hdfs dfs -ls /testSuperUser
+Found 1 items
+drwxr-xr-x   - hdfs hdfs          0 2014-08-13 22:42 /testSuperUser/testDirectory
+[hdfs@sandbox root]$ hdfs dfs -chmod 700 /testSuperUser/testDirectory
+[hdfs@sandbox root]$ hdfs dfs -ls /testSuperUser
+Found 1 items
+drwx------   - hdfs hdfs          0 2014-08-13 22:42 /testSuperUser/testDirectory</pre>
+</div></div><p>Now let's create an <code>animals</code> group with two users in it; <code>cat</code> and <code>bat</code>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="edfa3147-213a-4698-af9d-3a91bcf37f4e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hdfs@sandbox root]$ exit
+exit
+[root@sandbox ~]# groupadd animals
+[root@sandbox ~]# useradd -ganimals cat
+[root@sandbox ~]# useradd -ganimals bat
+[root@sandbox ~]# lid -g animals
+ cat(uid=1021)
+ bat(uid=1022)</pre>
+</div></div><p>Then make sure they can't do anything that requires superuser access.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="1d25ddd0-0f17-4191-b518-42f35bee565e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@sandbox ~]# su cat
+[cat@sandbox root]$ hdfs dfs -ls /testSuperUser
+Found 1 items
+drwx------   - hdfs hdfs          0 2014-08-13 22:42 /testSuperUser/testDirectory
+[cat@sandbox root]$ hdfs dfs -chgrp bogus /testSuperUser/testDirectory
+chgrp: changing ownership of '/testSuperUser/testDirectory': Permission denied</pre>
+</div></div><p>No joy, but that is as expected.  The instructions at <a class="external-link" href="http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#Configuration_Parameters" rel="nofollow">http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#Configuration_Parameters</a> let me know I need to make sure there is a <code>dfs.permissions.superusergroup</code> KVP created for <code>hdfs-site.xml</code>.  This parameter can be found in Ambari at <em>Services &gt; HDFS &gt; Configs &gt; Advanced &gt; dfs.permissions.superusergroup</em>.  For my <a class="external-link" href="http://hortonworks.com/products/hortonworks-sandbox/" rel="nofollow">Hortonworks Sandbox</a> this value is set to <code>hdfs</code>.  This also aligns with the fact that unless you do a −<code>chgrp</code>, your newly created items have the group set to <code>hdfs</code> on this little pseudo-cluster.  <strong>Contrary to what you would expect (i.e. the group becomes the value for this setting), I did find out later that even with a different superusergroup identified, the owning group stayed as <code>hdfs</code>.</strong></p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="7b5b6a8a-90e0-4852-a1d9-c3552312727f" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[cat@sandbox root]$ exit
+exit
+[root@sandbox ~]# su turtle
+[turtle@sandbox root]$ hdfs dfs -put /etc/group groups.txt
+[turtle@sandbox root]$ hdfs dfs -ls 
+Found 1 items
+-rw-r--r--   1 turtle hdfs       1033 2014-08-13 23:12 groups.txt</pre>
+</div></div><p>After I changed the &quot;superuser&quot; group to be <code>animals</code>, I could then make the changes that I wanted to earlier.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="3f6b8e18-0d02-4366-8559-983d882a1197" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[turtle@sandbox root]$ exit
+exit
+[root@sandbox ~]# su cat
+[cat@sandbox root]$ hdfs dfs -ls /testSuperUser
+Found 1 items
+drwx------   - hdfs hdfs          0 2014-08-13 22:42 /testSuperUser/testDirectory
+[cat@sandbox root]$ hdfs dfs -chgrp bogus /testSuperUser/testDirectory
+[cat@sandbox root]$ hdfs dfs -ls /testSuperUser
+Found 1 items
+drwx------   - hdfs bogus          0 2014-08-13 22:42 /testSuperUser/testDirectory</pre>
+</div></div><p>I also did not screw up the fact that <code>hdfs</code> is my true superuser as shown by my &quot;old&quot; HDFS home directory process.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="9f5ace3b-102d-4e0f-84f8-236d9a10c2bf" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[cat@sandbox root]$ exit
+exit
+[root@sandbox ~]# useradd user1
+[root@sandbox ~]# su hdfs
+[hdfs@sandbox root]$ hdfs dfs -mkdir /user/user1
+[hdfs@sandbox root]$ hdfs dfs -ls /user
+
+   ... rm'd some lines ...  NOTICE THAT THE GROUP STILL DEFAULTS TO hdfs, NOT animals
+
+drwxr-xr-x   - hdfs           hdfs           0 2014-08-13 23:49 /user/user1
+[hdfs@sandbox root]$ hdfs dfs -chown user1 /user/user1
+[hdfs@sandbox root]$ hdfs dfs -chgrp user1 /user/user1
+[hdfs@sandbox root]$ hdfs dfs -ls /user
+
+   ... rm'd some lines ...
+
+drwxr-xr-x   - user1          user1          0 2014-08-13 23:49 /user/user1</pre>
+</div></div><p>Which can now also be done as a &quot;real&quot; user if set up appropriately.  If <code>bat</code> had appropriate <code>sudo</code> rights, then I could have done the following without starting out at <code>root</code>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0ec2e26c-3cbd-4bc4-86ed-b118662f11ad" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[hdfs@sandbox root]$ exit
+exit
+[root@sandbox ~]# useradd user2
+[root@sandbox ~]# su bat
+[bat@sandbox root]$ hdfs dfs -mkdir /user/user2
+[bat@sandbox root]$ hdfs dfs -ls /user
+
+   ... rm'd some lines ...  NOTICE THAT THE GROUP STILL DEFAULTS TO hdfs, NOT animals
+
+drwxr-xr-x   - user1          user1          0 2014-08-13 23:49 /user/user1
+drwxr-xr-x   - bat            hdfs           0 2014-08-13 23:55 /user/user2
+[bat@sandbox root]$ hdfs dfs -chown user2 /user/user2
+[bat@sandbox root]$ hdfs dfs -chgrp user2 /user/user2
+[bat@sandbox root]$ hdfs dfs -ls /user
+
+   ... rm'd some lines ...
+
+drwxr-xr-x   - user1          user1          0 2014-08-13 23:49 /user/user1
+drwxr-xr-x   - user2          user2          0 2014-08-13 23:55 /user/user2</pre>
+</div></div><p>As usual, there are many ways to skin this cat and this simple property is the gateway to those choices.  <em>For many, the simple model of just adding the desired linux user(s) to the existing &quot;superusers&quot; group may be the way to go</em>.  If you are using this today, or might just do so, I'd love to hear your actual, or planned, approach. </p>
+</body>
+</html>

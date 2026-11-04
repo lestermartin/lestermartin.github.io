@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop PC Hadoop Cluster</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="index.html">&larr; Index</a></nav>
+<h1>Desktop PC Hadoop Cluster</h1>
+<p class="meta">2014-10-23 &middot; Lester Martin</p>
+<p>JUST A COLLECTION OF RAMBLINGS RIGHT NOW of a Hadoop playground built on <a class="external-link" href="http://shop.lenovo.com/gb/en/desktops/lenovo/h-series/h500s/" rel="nofollow">Lenovo H500s</a> slim desktop machines that cost about $200 a piece. </p><h4 id="DesktopPCHadoopCluster-somenotesaboutloadinglinuxonthismachine...">some notes about loading linux on this machine...</h4><p><a class="external-link" href="https://forums.lenovo.com/t5/Lenovo-3000-and-Valueline/H500s-Can-t-Install-Any-Operating-System/td-p/1407139" rel="nofollow">https://forums.lenovo.com/t5/Lenovo-3000-and-Valueline/H500s-Can-t-Install-Any-Operating-System/td-p/1407139</a><br/><br/>I simply changed the boot order to legacy and changed the CSM or CBC or whatever it was called and it booted FreeBSD from CD fine. <br/><br/>For all those who wish to install windows 7 on H500S. It is quite simple. I have figured it out for myself, you would grow old waiting for a response from Lenovo.<br/><br/>On switching on PC press F1 enter Bios. Go to Startup change Boot Priority to Legacy only. Also disable Fast Boot. Save and exit BIOS. On Re-Boot press F12 you will then see your choice of Hard Disk or DVD Rom. Have your Windows 7 Disk in the Drive and select it. Simple and Windows 7 will load and install.<br/><br/>Dont forget to disable fast boot in the BIOS because if you dont your Windows 7 will fail to load basic Drivers like Mouse and Keyboard.  You do not need to update your Bios to perform these operations.<br/><br/>When you have installed Windows 7 leave your BIOS set to Legacy. But you can of course change back to quick boot if you wish.<br/><br/></p><h4 id="DesktopPCHadoopCluster-MicroCluster?">Micro Cluster?</h4><p><a class="external-link" href="https://dqydj.com/raspberry-pi-hadoop-cluster-apache-spark-yarn/" rel="nofollow">https://dqydj.com/raspberry-pi-hadoop-cluster-apache-spark-yarn/</a></p><p><strong>options for using MB Pro or iPad Pro as an external monitor to another machine...</strong></p><ul><li>AirDisplay - <a class="external-link" href="http://avatron.com/applications/air-display/" rel="nofollow">http://avatron.com/applications/air-display/</a></li><li>IIRC, Screen Recycler was mentioned (not tested by me) at <a class="external-link" href="https://discussions.apple.com/thread/7589159?start=0&amp;tstart=0" rel="nofollow">https://discussions.apple.com/thread/7589159?start=0&amp;tstart=0</a></li><li>or... just run VNC and SSH??</li></ul>
+</body>
+</html>
