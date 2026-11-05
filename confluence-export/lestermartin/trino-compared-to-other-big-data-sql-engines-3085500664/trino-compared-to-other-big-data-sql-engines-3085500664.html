@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trino Compared to Other Big Data SQL Engines</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>Trino Compared to Other Big Data SQL Engines</h1>
+<p class="meta">2022-04-18 &middot; Lester Martin</p>
+<p>WORK IN PROGRESS (FOR SURE!)</p><p /><h2 id="TrinoComparedtoOtherBigDataSQLEngines-ParallelProcessingConcepts">Parallel Processing Concepts</h2><div class="table-wrap"><table data-layout="default" data-local-id="b5838a65-6834-4101-bf15-38e43bc373ee" class="confluenceTable"><colgroup><col style="width: 170.0px;"/><col style="width: 170.0px;"/><col style="width: 170.0px;"/><col style="width: 170.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>Concept</strong></p></th><th class="confluenceTh"><p><strong>Trino</strong></p></th><th class="confluenceTh"><p><strong>Hive on Tez</strong></p></th><th class="confluenceTh"><p><strong>Spark SQL</strong></p></th></tr><tr><td class="confluenceTd"><p>Validated string of SQL</p></td><td class="confluenceTd"><p>Query</p></td><td class="confluenceTd"><p>Query</p></td><td class="confluenceTd"><p>Query</p></td></tr><tr><td class="confluenceTd"><p>Parallelized slice of input data</p></td><td class="confluenceTd"><p>Split</p></td><td class="confluenceTd"><p>Block</p></td><td class="confluenceTd"><p>Partition</p></td></tr><tr><td class="confluenceTd"><p>Individual Operations</p></td><td class="confluenceTd"><p>Operator</p></td><td class="confluenceTd"><p>?Operator?</p></td><td class="confluenceTd"><p>?Function?</p></td></tr><tr><td class="confluenceTd"><p>Pipeline of narrow operations working on a slice of data </p></td><td class="confluenceTd"><p>Task (can be broken into more than 1 “Driver” internally)</p></td><td class="confluenceTd"><p>Mapper or Reducer</p></td><td class="confluenceTd"><p>Task</p></td></tr><tr><td class="confluenceTd"><p>Collection of same type of tasks running in parrellel</p></td><td class="confluenceTd"><p>Stage (logically called a Fragment)</p></td><td class="confluenceTd"><p>Map or Reduce Stage</p></td><td class="confluenceTd"><p>Stage</p></td></tr><tr><td class="confluenceTd"><p>Transfer of data between stages caused by a wide operations</p></td><td class="confluenceTd"><p>Exchange</p></td><td class="confluenceTd"><p>Shuffle</p></td><td class="confluenceTd"><p>Shuffle</p></td></tr><tr><td class="confluenceTd"><p>Series of interrelated stages to finalized results of a query</p></td><td class="confluenceTd"><p>Query Plan</p></td><td class="confluenceTd"><p>DAG</p></td><td class="confluenceTd"><p>Job</p></td></tr><tr><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td></tr><tr><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td></tr></tbody></table></div><p /><p /><p>Architectural Concepts</p><p /><p /><p /><p>Join Types</p><p /><p /><p>Query Optimizations</p><p /><p /><h2 id="TrinoComparedtoOtherBigDataSQLEngines-SQLDifferences">SQL Differences</h2><div class="table-wrap"><table data-layout="default" data-local-id="5bd4ea42-babd-4c42-935f-ee95c8b70d57" class="confluenceTable"><colgroup><col style="width: 226.67px;"/><col style="width: 226.67px;"/><col style="width: 226.67px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>Action</strong></p></th><th class="confluenceTh"><p><strong>Trino</strong></p></th><th class="confluenceTh"><p><strong>Hive</strong></p></th></tr><tr><td class="confluenceTd"><p>List the name of the underlying data file that a particular row is sourced from</p></td><td class="confluenceTd"><p><code>select &quot;$path&quot;, colX from table;</code></p></td><td class="confluenceTd"><p><code>select INPUT__FILE__NAME, colX from table;</code></p></td></tr><tr><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td><td class="confluenceTd"><p /></td></tr></tbody></table></div>
+</body>
+</html>

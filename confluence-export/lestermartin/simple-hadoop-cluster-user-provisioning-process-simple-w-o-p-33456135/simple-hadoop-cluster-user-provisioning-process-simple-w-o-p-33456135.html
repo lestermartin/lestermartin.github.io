@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</h1>
+<p class="meta">2014-11-24 &middot; Lester Martin</p>
+<p>These instructions are for <em><strong>&quot;simple&quot;</strong> </em>Hadoop clusters that have no sophisticated <a class="external-link" href="http://en.wikipedia.org/wiki/Pluggable_authentication_module" rel="nofollow">PAM</a> and/or Kerberos integrations.  They are ideal for the <a class="external-link" href="http://hortonworks.com/products/hortonworks-sandbox/" rel="nofollow">HDP Sandbox</a> or other such &quot;simple&quot; setups like the one called out in <a href="../building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444/building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a><span class="confluence-link"> </span> that rely on &quot;local&quot; users.</p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="7441f8cc-c328-4eaf-a1ec-26780c6f81ca" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>For all command examples, replace <strong><code>$theNEWusername</code></strong> <em>with the username being created</em>.</p></div></div><h4 id="simplehadoopclusteruserprovisioningprocess(simple=w/opamorkerberos)-EdgeNode/ClientGateway">Edge Node / Client Gateway</h4><p>On the box(es) where the user will SSH to and utilize CLI tools (this does NOT have to be a dedicated machine; for example, on the Sandbox there is only one machine), login as root and execute the following commands to create a local account and set the password.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="c92c4693-33f2-404a-8ac7-009e20102700" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">useradd -m -s /bin/bash $theNEWusername
+passwd $theNEWusername</pre>
+</div></div><p>Then create a HDFS home directory for this new user.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="319f36b0-d44a-4e48-9ea0-b96900ece4f4" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">su - hdfs
+hdfs dfs -mkdir /user/$theNEWusername
+hdfs dfs -chown $theNEWusername /user/$theNEWusername
+hdfs dfs -chmod -R 755 /user/$theNEWusername</pre>
+</div></div><h4 id="simplehadoopclusteruserprovisioningprocess(simple=w/opamorkerberos)-Master&amp;WorkerNodes">Master &amp; Worker Nodes</h4><p>On the remainder of the cluster nodes (if any), we just need to have the new user present.  There is no need to set a password as these CLI users will not need to log into any of these hosts directly.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="fd2feddf-dda7-4ce5-906a-45e057cf71e6" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">useradd $theNEWusername</pre>
+</div></div><h4 id="simplehadoopclusteruserprovisioningprocess(simple=w/opamorkerberos)-UserValidation">User Validation</h4><p>To validate, users can SSH into the edge node with their new credentials and run the following commands to verify that they can manipulate content on HDFS.  <em>Note: where in Linux user can use &quot;~&quot; to reference their home directory, the <a class="external-link" href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/FileSystemShell.html" rel="nofollow">FS Shell</a> treats relative referencing (i.e. nothing before the initial file or folder name) as the equivalent to &quot;~/&quot; which means everything is based on the user's home folder in HDFS.</em></p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="8291916a-a2c1-4ee5-b7bb-f9e84fb88e9e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hdfs dfs -put /etc/group groupList.txt
+hdfs dfs -ls /user/$theNEWusername
+hdfs dfs -cat groupList.txt
+hdfs dfs -rm -skipTrash /user/$theNEWusername/groupList.txt
+</pre>
+</div></div>
+</body>
+</html>

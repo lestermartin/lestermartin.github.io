@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hadoop mini smoke test (VERY mini)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>hadoop mini smoke test (VERY mini)</h1>
+<p class="meta">2015-01-10 &middot; Lester Martin</p>
+<p>Obviously, a Hadoop cluster is a complicated beast.  Hortonworks' <a class="external-link" href="http://hortonworks.com/blog/available-now-hdp-2-2/" rel="nofollow">HDP 2.2</a> is a great example of where advanced Hadoop distributions are going and of the multitude of components coming together to enable the <a class="external-link" href="http://hortonworks.com/blog/hadoop-ecosystem-modern-data-architecture/" rel="nofollow">Modern Data Architecture</a>.  Executing an exhaustive test of all the components, or at least the ones you are using, is critical, but sometimes you just need to do a simple smoke test.  This post presents even less than that; a <strong>mini smoke test</strong> which just might fit the bill in some situations such as validating your <a href="../building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444/building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a> exercise.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="smoke-banner.jpg" data-unresolved-comment-count="0" data-linked-resource-id="34832470" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="34832472" data-linked-resource-container-version="1" data-media-id="f15bb36a-7384-48c7-b21a-cfe4199b22a3" data-media-type="file"></span></p><p>This simple tutorial will present some very quick MapReduce, Hive and Pig tests you can run to gain, at least a small amount of, confidence in a cluster.  For my purposes, I've created a user called <code>lester</code> using the <a href="../simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135/simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135.html" data-linked-resource-id="33456135" data-linked-resource-version="5" data-linked-resource-type="blogpost">simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</a> instructions.</p><h4 id="hadoopminismoketest(VERYmini)-MapReduceTesting">MapReduce Testing</h4><p>The quintessential testing approach for MapReduce is <a class="external-link" href="https://hadoop.apache.org/docs/current/api/org/apache/hadoop/examples/terasort/package-summary.html" rel="nofollow">Terasort</a>.  My examples below are based on the <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.2.0/HDP_Man_Install_v22/index.html#Item1.5.7" rel="nofollow">HDP 2.2 instructions</a> (there is a typo in there <em>– bonus points for catching it</em>).  I ran the following command to generate 50MB of test data.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hadoop jar /usr/hdp/current/hadoop-mapreduce-client/hadoop-mapreduce-examples-*.jar teragen 500000 /user/lester/teragen-50MB</pre>
+</div></div><p>To validate the data was created, just run the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ hdfs dfs -du /user/lester/teragen-50MB
+0         /user/lester/teragen-50MB/_SUCCESS
+25000000  /user/lester/teragen-50MB/part-m-00000
+25000000  /user/lester/teragen-50MB/part-m-00001
+[lester@n1 ~]$ </pre>
+</div></div><p>Or get a human-readable summarized format.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ hdfs dfs -du -s -h /user/lester/teragen-50MB
+47.7 M  /user/lester/teragen-50MB
+[lester@n1 ~]$ </pre>
+</div></div><p>Then you can sort it.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">hadoop jar /usr/hdp/current/hadoop-mapreduce-client/hadoop-mapreduce-examples-*.jar terasort /user/lester/teragen-50MB /user/lester/terasort-50MB</pre>
+</div></div><p>When finished, double-check to make sure the same size data has been outputted. </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ hdfs dfs -du /user/lester/terasort-50MB
+0         /user/lester/terasort-50MB/_SUCCESS
+0         /user/lester/terasort-50MB/_partition.lst
+50000000  /user/lester/terasort-50MB/part-r-00000
+[lester@n1 ~]$ hdfs dfs -du -s -h /user/lester/terasort-50MB
+47.7 M  /user/lester/terasort-50MB
+[lester@n1 ~]$ </pre>
+</div></div><p>Of course, the real purpose of TeraSort is <a class="external-link" href="http://www.michael-noll.com/blog/2011/04/09/benchmarking-and-stress-testing-an-hadoop-cluster-with-terasort-testdfsio-nnbench-mrbench/" rel="nofollow">benchmarking</a> so feel free to mess with data bigger than 50MB.</p><h4 id="hadoopminismoketest(VERYmini)-HiveTesting">Hive Testing</h4><p>Let's do some quick testing with Hive, too.  Create a simple CSV file and load it into HDFS.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ cat data.txt
+a,1
+b,2
+c,3
+[lester@n1 ~]$ hdfs dfs -put data.txt
+[lester@n1 ~]$ hdfs dfs -cat /user/lester/data.txt
+a,1
+b,2
+c,3
+[lester@n1 ~]$ </pre>
+</div></div><p>The following script creates a table that this data could be housed into.  <strong>NOTE:</strong> <code>OpenCSVSerde</code> only surfaced in Hive 0.14 as described <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/CSV+Serde" rel="nofollow">here</a>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>createTable.hql</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">CREATE TABLE alpha_num ( alpha string, num int )
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;</pre>
+</div></div><p>It can be created by running <code>hive -f createTable.hql</code>, then we can use Hive's CLI to interactively describe, load, and query the new table.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ hive 
+hive&gt; DESCRIBE alpha_num;                                           
+OK
+alpha                   string                  from deserializer   
+num                     string                  from deserializer   
+Time taken: 0.462 seconds, Fetched: 2 row(s)
+hive&gt; LOAD DATA INPATH '/user/lester/data.txt' INTO TABLE alpha_num;
+Loading data to table default.alpha_num
+Table default.alpha_num stats: [numFiles=1, totalSize=12]
+OK
+Time taken: 0.498 seconds
+hive&gt; SELECT * FROM alpha_num;                                      
+OK
+a    1
+b    2
+c    3
+Time taken: 0.125 seconds, Fetched: 3 row(s)
+hive&gt; exit;
+[lester@n1 ~]$ </pre>
+</div></div><p>Obviously, thanks to HCatalog, this data is available from other languages/framework/components beyond Hive.</p><h4 id="hadoopminismoketest(VERYmini)-PigTesting">Pig Testing</h4><p>Pig is one of those languages that could use HCatalog by leveraging <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/HCatalog+LoadStore" rel="nofollow">HCatalog LoadStore</a>, but we'll keep it simple and just load a file off HDFS.  Just copy the CSV file back into HDFS (the Hive <code>LOAD</code> command deleted it above).  <em>To not let this be too simple,</em> I'm leveraging the <a class="external-link" href="http://pig.apache.org/docs/r0.12.0/api/org/apache/pig/piggybank/storage/CSVExcelStorage.html" rel="nofollow"><code>CSVExcelStorage</code></a> class as referenced in <a href="../use-pig-to-calculate-salary-statistics-for-georgia-educators-23494745/use-pig-to-calculate-salary-statistics-for-georgia-educators-23494745.html" data-linked-resource-id="23494745" data-linked-resource-version="7" data-linked-resource-type="blogpost">use pig to calculate salary statistics for georgia educators (second of a three-part series)</a>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[lester@n1 ~]$ hdfs dfs -put data.txt 
+[lester@n1 ~]$ cat dumpData.pig 
+REGISTER /usr/hdp/current/pig-client/piggybank.jar;
+az99 = LOAD '/user/lester/data.txt'
+  using org.apache.pig.piggybank.storage.CSVExcelStorage()
+  as (alpha:chararray, num:int);
+dump az99;
+[lester@n1 ~]$ pig dumpData.pig 
+(a,1)
+(b,2)
+(c,3)
+[lester@n1 ~]$ </pre>
+</div></div><p>These three areas surely don't test all components, nor each of these exhaustively, but they can give you some quick confidence that the basics are working.  <em>Sometimes... that's enough!</em></p>
+</body>
+</html>

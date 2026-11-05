@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>building a virtualized 5-node HDP 2.0 cluster (all within a mac)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>building a virtualized 5-node HDP 2.0 cluster (all within a mac)</h1>
+<p class="meta">2014-01-19 &middot; Lester Martin</p>
+<div class="confluence-information-macro confluence-information-macro-tip conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="tip"><style>[data-colorid=tggnbic92z]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=tggnbic92z]{color:#b0cfd2}[data-colorid=annb23krwa]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=annb23krwa]{color:#b0cfd2}[data-colorid=um6a9bvjay]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=um6a9bvjay]{color:#b0cfd2}[data-colorid=u0jyoeofu5]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=u0jyoeofu5]{color:#b0cfd2}[data-colorid=avpmtuh27l]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=avpmtuh27l]{color:#b0cfd2}[data-colorid=mf163z65cq]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=mf163z65cq]{color:#b0cfd2}[data-colorid=vhuxsvv1vd]{color:#2d4c4f} html[data-color-mode=dark] [data-colorid=vhuxsvv1vd]{color:#b0cfd2}</style><span class="aui-icon aui-icon-small aui-iconfont-approve confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>This blog posting's content was originally on the <a href="../build-a-virtualized-5-node-hadoop-2-0-cluster-19431466/build-a-virtualized-5-node-hadoop-2-0-cluster-19431466.html" data-linked-resource-id="19431466" data-linked-resource-version="36" data-linked-resource-type="page">Build a Virtualized 5-Node Hadoop 2.0 Cluster</a> wiki page, but it just made sense to refactor it into a blog posting based on the short shelf-life it has due to changes in the ever-evolving HDP stack.</p></div></div><p>This write-up is designed to capture the steps required to stand up a 5-node <a class="external-link" href="http://hortonworks.com/products/hdp-2/" rel="nofollow">HDP2 (Hortonworks Data Platform)</a> Hadoop 2.0/<a class="external-link" href="https://hadoop.apache.org/docs/current2/hadoop-yarn/hadoop-yarn-site/YARN.html" rel="nofollow">YARN</a> cluster <strong>(with 2 master nodes &amp; 3 worker nodes)</strong> running on <a class="external-link" href="http://vault.centos.org/6.4/" rel="nofollow">CentOS 6.4</a> <em>&ndash; all executing within <a class="external-link" href="https://www.virtualbox.org/" rel="nofollow">VirtualBox</a></em>.&nbsp; Of course, you'll need a beefy host machine to run all of these 5 guest machines within.&nbsp; To help me out, the good folks at <a class="external-link" href="http://hortonworks.com/" rel="nofollow">Hortonworks</a> outfitted me with a MacBook Pro that has a 2.3 GHz i7 processor, 16GB of ram, and a 500GB SSD.&nbsp; <em>Yes... I know... I'm lucky!</em></p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p><strong><a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/index.html" rel="nofollow">HDP 2.0.9.0</a> was utilized for this tutorial.</strong>&nbsp; Documentation for the most current version of HDP is available at <a class="external-link" href="http://docs.hortonworks.com/" rel="nofollow">http://docs.hortonworks.com/</a>.</p></div></div><p>When we are done, we will have a cluster like the visualization below.</p><p><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="5nodeCluster.jpg" data-unresolved-comment-count="0" data-linked-resource-id="19693577" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="90209dc0-d2a1-49ad-8e5a-f151949c47cb" data-media-type="file" /></span></p><div class="sectionColumnWrapper conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="section"><div class="sectionMacro"><div class="sectionMacroRow"><div class="columnMacro conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="column"><p>This effort isn't a 15 minute effort for the faint of heart and keeping up with the <a class="external-link" href="https://twitter.com/EarlsOfWisdom" rel="nofollow">Earl of Wisdom</a> to the right that suggests that you have to bring some level of sys admin, networking, debugging, root/cause analysis, and just plain &quot;hunting&quot; skills before you'd even try to do this, this write-up will NOT present a series of mindless screenshots.&nbsp;</p><p>Additionally, I CAN GUARANTEE that there will be some bumps along the way that will require you to do some digging on your own.&nbsp; You can raise concerns via the comments section at the bottom of the page and I'll try help you unjam any problems you can't work through.</p><p><em><strong>That said, let's get started!!</strong></em></p></div><div class="columnMacro conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="column"><p> </p><div class="widget-tweet conf-macro output-block" data-hasbody="false" data-macro-id="" data-macro-name="widget">
+    <fieldset class="hidden">
+                    </fieldset>
+    <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Be able to start up a Minecraft server before trying to bring up a Hadoop cluster.</p>&mdash; Earls of Wisdom (@EarlsOfWisdom) <a href="https://x.com/EarlsOfWisdom/status/423881092211298304?ref_src=twsrc%5Etfw">January 16, 2014</a></blockquote>
+
+
+</div>
+<p> </p></div></div></div></div><p /><div class="toc-macro client-side-toc-macro  conf-macro output-block" data-hasbody="false" data-headerelements="H1,H2,H3,H4,H5,H6,H7" data-macro-id="" data-macro-name="toc"> </div><p /><h1 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-FirstMasterNode">First Master Node</h1><p>After you get VirtualBox setup, then we need to get a base install of CentOS going that we can use as a baseline.&nbsp; We can then tweak it for the other nodes.&nbsp; As we'll be doing a &quot;Minimal Install&quot;, we only need the Disk1 ISO which you can get <a class="external-link" href="http://vault.centos.org/6.4/isos/x86_64/CentOS-6.4-x86_64-bin-DVD1.iso" rel="nofollow">here</a>.&nbsp;</p><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-MinimalInstallationusingDHCP">Minimal Installation using DHCP</h2><p>As mentioned above, some of this is an &quot;explore as you go&quot; exercise and I surely don't want to give you screenshots of every single step of setting up CentOS to run within a VirtualBox VM.&nbsp; Fortunately, there are good examples out there in the wild and some quick google searching yields some good links.&nbsp; For this exercise, I suggest taking a look at the write-up at <a class="external-link" href="http://webees.me/installing-centos-6-4-in-virtualbox-and-setting-up-host-only-networking/" rel="nofollow">http://webees.me/installing-centos-6-4-in-virtualbox-and-setting-up-host-only-networking/</a>.&nbsp; It is not perfect (and the author, like me, leaves some things out), but it should get you going.&nbsp; The page at <a class="external-link" href="http://extr3metech.wordpress.com/2012/10/25/centos-6-3-installation-in-virtual-box-with-screenshots/" rel="nofollow">http://extr3metech.wordpress.com/2012/10/25/centos-6-3-installation-in-virtual-box-with-screenshots/</a> could also be reviewed prior to starting this step.</p><p>Here are some specific items that need to be addressed during the setup (again, above-n-beyond the basics identified in the earlier tutorials) that are focused on our need to build a multi-node Hadoop cluster.</p><ul><li>In the VirtualBox UI:<br /><ul><li>Name the host <strong>5N-HDP2-M1</strong>.&nbsp; <em>More on the naming convention later.</em></li><li>Set the memory to 2GB and create a 20GB (dynamically allocated) hard drive.</li><li>For t<span>he&nbsp;</span><strong style="text-align: left;">Network</strong><span data-colorid="um6a9bvjay">&nbsp;options, set&nbsp;</span><strong style="text-align: left;">Adapter 1</strong><span data-colorid="u0jyoeofu5">&nbsp;to use&nbsp;</span><strong style="text-align: left;">NAT</strong><span data-colorid="annb23krwa">&nbsp;and set&nbsp;</span><strong style="text-align: left;">Adapter 2</strong><span data-colorid="mf163z65cq">&nbsp;to use the&nbsp;</span><strong style="text-align: left;">Host-only Adapter</strong><span data-colorid="vhuxsvv1vd">&nbsp;identified as&nbsp;</span><strong style="text-align: left;">vboxnet0</strong><span data-colorid="tggnbic92z">&nbsp;which will allow the host OS to access the CentOS VM.&nbsp; We'll move this second adapter from DHCP to static later.</span></li></ul></li><li><span data-colorid="avpmtuh27l">During the CentOS installation setup:</span><ul><li><span>When </span>it is time to select the <strong>Hostname</strong>, use &quot;m1.hdp2&quot; <em>(again, more on naming convention later)</em>.&nbsp;</li><li>On that same screen, click the <strong>Configure Network</strong> button to edit <em>each of the two</em> listed &quot;System ethX&quot; network connections and select the <strong>Connect automatically</strong> checkbox for both.&nbsp;</li><li>For simplicity's sake (i.e. were going to end up with a lot of passwords!) just use &quot;hadoop&quot; for the root password.&nbsp;</li><li>Stick with the default &quot;Minimal installation&quot; type.&nbsp;</li></ul></li></ul><p><strong><em>If all goes well,</em></strong> then you'll end up with a CLI-only Linux box that you can now log into.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">CentOS release 6.4 (Final)
+Kernel 2.6.32-358.el6.x86_64 on an x86_64
+
+m1 login: root
+Password: 
+[root@m1 ~]# _</pre>
+</div></div><p>At this point, we're using DHCP so run <code>ifconfig</code> to see what IP address is being used<em> (my eth1 connection reported 192.168.56.102, but <strong>yours may vary</strong>)</em>.&nbsp; Then use a terminal program from your host to make sure you can log into the newly created virtual machine.&nbsp; And once there, ping an external server to verify it can reach back out.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">hw10653:~ lmartin$ ssh root@192.168.56.102
+root@192.168.56.102's password: 
+Last login: Thu Jan 16 15:34:32 2014 from 192.168.56.1
+[root@m1 ~]# 
+[root@m1 ~]# ping www.google.com
+PING www.google.com (74.125.227.113) 56(84) bytes of data.
+64 bytes from dfw06s16-in-f17.1e100.net (74.125.227.113): icmp_seq=1 ttl=63 time=46.0 ms
+64 bytes from dfw06s16-in-f17.1e100.net (74.125.227.113): icmp_seq=2 ttl=63 time=43.2 ms
+^C
+--- www.google.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1531ms
+rtt min/avg/max/mdev = 43.230/44.615/46.001/1.401 ms
+[root@m1 ~]# </pre>
+</div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-ConfigureStaticIP">Configure Static IP</h2><p>Edit <code>/etc/sysconfig/network-scripts/ifcfg-eth1</code> to make the following changes:</p><ul><li>Make sure <code>ONBOOT</code> is set to <code>yes</code> <em>(will be if you selected the <strong>Connect automatically</strong> checkbox during installation and mentioned above)</em></li><li>Change <code>NM_CONTROLLED</code> from <code>yes</code> to <code>no</code></li><li>Change <code>BOOTPROTO</code> from <code>dhcp</code> to <code>none</code></li><li>Add the following lines<ul><li><code>IPADDR=192.168.56.41</code></li><li><code>NETMASK=255.255.255.0</code></li></ul></li><li>Remove the lines that start with the following<br /><ul><li><code>UUID</code></li><li><code>HWADDR</code></li></ul></li></ul><p>Edit <code>/etc/sysconfig/network-scripts/ifcfg-eth0</code> and remove the line starting with <code>UUID</code>.&nbsp; Run&nbsp;<code>rm /etc/udev/rules.d/70-persistent-net.rules</code> to flush out the existing network settings and then issue a <code>shutdown -r now</code> to reboot the machine.</p><p>After the box is restarted try to ping 192.168.56.41 (the virtual machine &quot;m1&quot; that we just built), ssh to it, and once there ping back to the guest host (the vboxnet0 identifies it as 192.168.56.1) to verify it is routable in &amp; out.&nbsp; Also, verify that you can still ping addresses in the wild.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">hw10653:~ lmartin$ ping 192.168.56.41
+PING 192.168.56.41 (192.168.56.41): 56 data bytes
+64 bytes from 192.168.56.41: icmp_seq=0 ttl=64 time=0.297 ms
+64 bytes from 192.168.56.41: icmp_seq=1 ttl=64 time=0.345 ms
+^C
+--- 192.168.56.41 ping statistics ---
+2 packets transmitted, 2 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = 0.297/0.321/0.345/0.024 ms
+hw10653:~ lmartin$ 
+hw10653:~ lmartin$ ssh root@192.168.56.41
+root@192.168.56.41's password: 
+Last login: Sat Jan 18 03:28:27 2014 from 192.168.56.1
+[root@m1 ~]# 
+[root@m1 ~]# ping 192.168.56.1
+PING 192.168.56.1 (192.168.56.1) 56(84) bytes of data.
+64 bytes from 192.168.56.1: icmp_seq=1 ttl=64 time=0.201 ms
+64 bytes from 192.168.56.1: icmp_seq=2 ttl=64 time=0.230 ms
+^C
+--- 192.168.56.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1428ms
+rtt min/avg/max/mdev = 0.201/0.215/0.230/0.020 ms
+[root@m1 ~]# 
+[root@m1 ~]# ping www.google.com
+PING www.google.com (74.125.227.115) 56(84) bytes of data.
+64 bytes from dfw06s16-in-f19.1e100.net (74.125.227.115): icmp_seq=1 ttl=63 time=48.0 ms
+64 bytes from dfw06s16-in-f19.1e100.net (74.125.227.115): icmp_seq=2 ttl=63 time=105 ms
+^C
+--- www.google.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1481ms
+rtt min/avg/max/mdev = 48.053/76.825/105.598/28.773 ms
+[root@m1 ~]# </pre>
+</div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-HadoopInstallationPrep">Hadoop Installation Prep</h2><p>Before we create the additional nodes using this one as the base to start from, there are some additional steps we should take so we won't have to do them for each VM.&nbsp; Later in this document we will utilize the <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-1.html" rel="nofollow">Ambari documentation</a> to setup our cluster, but there are some items within that documentation that are useful at this time.</p><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-SSHSetup">SSH Setup</h3><p>First, run <code>yum install openssh-clients</code> and then use <code>ssh localhost</code> to verify it is working.</p><p>Next, follow the instructions at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-5-2.html</a> to allow password-less SSH connections. &nbsp;</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa): 
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /root/.ssh/id_rsa.
+Your public key has been saved in /root/.ssh/id_rsa.pub.
+The key fingerprint is:
+23:4a:e9:9f:c9:ea:91:1f:9b:bf:98:e2:16:af:0c:24 root@m1.hdp2
+The key's randomart image is:
++--[ RSA 2048]----+
+|                 |
+|                 |
+|                 |
+|     .           |
+|E . o . S        |
+| o o.o . .       |
+|  . =o.          |
+|   oo=.O         |
+|   +*+@.o.       |
++-----------------+
+[root@m1 ~]# cd .ssh
+[root@m1 .ssh]# ls -l
+total 12
+-rw-------. 1 root root 1675 Jan 18 04:15 id_rsa
+-rw-r--r--. 1 root root  394 Jan 18 04:15 id_rsa.pub
+-rw-r--r--. 1 root root  391 Jan 18 04:09 known_hosts
+[root@m1 .ssh]# 
+[root@m1 .ssh]# cat id_rsa.pub &gt;&gt; authorized_keys
+[root@m1 .ssh]# ls -l
+total 16
+-rw-r--r--. 1 root root  394 Jan 18 04:17 authorized_keys
+-rw-------. 1 root root 1675 Jan 18 04:15 id_rsa
+-rw-r--r--. 1 root root  394 Jan 18 04:15 id_rsa.pub
+-rw-r--r--. 1 root root  391 Jan 18 04:09 known_hosts
+[root@m1 .ssh]# 
+[root@m1 .ssh]# chmod 600 authorized_keys
+[root@m1 .ssh]# ls -l
+total 16
+-rw-------. 1 root root  394 Jan 18 04:17 authorized_keys
+-rw-------. 1 root root 1675 Jan 18 04:15 id_rsa
+-rw-r--r--. 1 root root  394 Jan 18 04:15 id_rsa.pub
+-rw-r--r--. 1 root root  391 Jan 18 04:09 known_hosts
+[root@m1 .ssh]# 
+[root@m1 .ssh]# ssh localhost
+Last login: Sat Jan 18 04:09:59 2014 from localhost
+[root@m1 ~]# </pre>
+</div></div><p>Lastly, create a file named <code>config</code> in <code>/root/.ssh</code> that contains <code>StrictHostKeyChecking no</code> as the only line.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# cd /root/.ssh
+[root@m1 .ssh]# echo 'StrictHostKeyChecking no' &gt;&gt; config
+[root@m1 .ssh]# cat config
+StrictHostKeyChecking no
+[root@m1 .ssh]# </pre>
+</div></div><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-DisableKeySecurityOptions">Disable Key Security Options</h3><p><a class="external-link" href="http://en.wikipedia.org/wiki/Security-Enhanced_Linux" rel="nofollow">Security-Enhanced Linux</a> (SELinux) is a <em>&quot;good thing&quot;</em> and I'm not recommending you not use it in your &quot;real&quot; environments, but for our purposes let's just disabled it.&nbsp; To do this simply edit <code>/etc/selinux/config</code> and change the <code>SELINUX</code> value from <code>enforcing</code> to <code>disabled</code>.</p><p>The Linux firewall, iptables, is also another <em>&quot;good thing&quot;</em>, but let's make our environment easier to install to by disabling it.&nbsp; Run the following commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# chkconfig iptables off
+[root@m1 ~]# chkconfig ip6tables off</pre>
+</div></div><p>Reboot and make sure the following output is seen to ensure iptables are not running at system startup.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# service iptables status
+iptables: Firewall is not running.
+[root@m1 ~]# </pre>
+</div></div><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-SetupNTPService">Setup NTP Service</h3><p>The clocks on all nodes in the cluster will need to be in-sync and the NTP service will take care of this for us.&nbsp; Execute <code>yum install ntp</code> to enable this service.&nbsp; Then type the following commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# chkconfig ntpd on
+[root@m1 ~]# service ntpd start
+Starting ntpd:                                             [  OK  ]
+[root@m1 ~]# </pre>
+</div></div><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-FlushNetworkingRules">Flush Networking Rules</h3><p>Perform the following as the final step (as a final flush of networking rules) in our preparation of a base VM to help create the other nodes.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# cd /etc/udev/rules.d
+[root@m1 rules.d]# rm 70-persistent-net.rules 
+rm: remove regular file `70-persistent-net.rules'? y
+[root@m1 rules.d]# </pre>
+</div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-PreConfigureHostsPre-ConfigureHosts"><span class="confluence-anchor-link conf-macro output-inline" data-hasbody="false" data-macro-id="" data-macro-name="anchor" id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-PreConfigureHosts"><span class="confluence-anchor-link" id="PreConfigureHosts"> </span></span>Pre-Configure Hosts</h2><p>When finished we will have the following 5 hosts in our cluster.</p><div class="table-wrap"><table class="confluenceTable"><tbody><tr><th class="confluenceTh">VirtualBox Name</th><th class="confluenceTh">OS Hostname</th><th class="confluenceTh">IP Address</th></tr><tr><td class="confluenceTd">5N-HDP2-M1</td><td class="confluenceTd">m1.hdp2</td><td class="confluenceTd">192.168.56.41</td></tr><tr><td class="confluenceTd">5N-HDP2-M2</td><td class="confluenceTd">m2.hdp2</td><td class="confluenceTd">192.168.56.42</td></tr><tr><td class="confluenceTd">5N-HDP2-W1</td><td class="confluenceTd">w1.hdp2</td><td class="confluenceTd">192.168.56.51</td></tr><tr><td class="confluenceTd">5N-HDP2-W2</td><td class="confluenceTd">w2.hdp2</td><td class="confluenceTd">192.168.56.52</td></tr><tr><td class="confluenceTd">5N-HDP2-W3</td><td class="confluenceTd">w3.hdp2</td><td class="confluenceTd">192.168.56.53</td></tr></tbody></table></div><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-UpdateHostsFile">Update Hosts File</h3><p>Since we will not be relying on DNS for name resolution, we need to add the lines below (as described in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-5-5.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-5-5.html</a>) to <code>/etc/hosts</code>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">192.168.56.41    m1.hdp2
+192.168.56.42    m2.hdp2
+192.168.56.51    w1.hdp2
+192.168.56.52    w2.hdp2
+192.168.56.53    w3.hdp2</pre>
+</div></div><p>Obviously, we've only created the first one of these servers, but we'll build out the rest of them shortly.</p><h3 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-SettheHostname">Set the Hostname</h3><p>Run the following commands and make sure the output is as shown.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 etc]# hostname m1.hdp2
+[root@m1 etc]# hostname -f
+m1.hdp2
+[root@m1 etc]# </pre>
+</div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-CreateNodeAppliance">Create Node Appliance</h2><p>Now that we have a solid baseline, let's use VirtualBox to create an &quot;appliance&quot; that can be used as an import when standing up the subsequent nodes.&nbsp; Select <strong>Export Appliance...</strong> from the <strong>File</strong> pulldown and the highlight the <strong>5N-HDP2-M1</strong> VM before clicking on <strong>Continue</strong>. &nbsp; Change the filename of the export to be <strong>5N-HDP2-template.ova</strong> (stick with the default OVF 1.0 format) and click on <strong>Continue</strong> (make note of the directory this file will be created in).&nbsp; In the <strong>Appliance settings</strong> screen, change the Name to be <strong>5N-HDP2-template</strong> and click on the <strong>Export</strong> button.</p><h1 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-RemainingNodesRemainingNodes"><span class="confluence-anchor-link conf-macro output-inline" data-hasbody="false" data-macro-id="" data-macro-name="anchor" id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-RemainingNodes"><span class="confluence-anchor-link" id="RemainingNodes"> </span></span>Remaining Nodes</h1><p>For the second master node and all three of the worker nodes, repeat the steps in this section.</p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p><strong>NOTE:</strong> All examples will show the VirtualBox Name, OS Hostname, and IP Address of the <em>second master node</em>.&nbsp; For the worker nodes, replace them with the appropriate values as detailed in the <a href="#PreConfigureHosts">Pre-Configure Hosts</a> section earlier in this document.</p></div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-ImportTemplateAppliance">Import Template Appliance</h2><p>From the VirtualBox <strong>File</strong> pulldown, select <strong>Import Appliance...</strong> and select the <strong>5N-HDP2-template.ova</strong> previously created and click the <strong>Continue</strong> button.&nbsp; On the <strong>Appliance settings</strong> screen edit the <strong>Name</strong> field to represent the appropriate VirtualBox Name (example: <strong>5N-HDP2-M2</strong>).&nbsp; Select the <strong>Reinitialize the MAC address of all network cards checkbox</strong> and click on <strong>Import</strong>.</p><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-ModifyNode-SpecificSettings">Modify Node-Specific Settings</h2><div class="confluence-information-macro confluence-information-macro-note conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="note"><span class="aui-icon aui-icon-small aui-iconfont-warning confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>Make sure the <strong>5N-HDP2-M1</strong> VM is not running before starting up each newly imported machine as to avoid two machines binding to the same static IP address; 192.168.56.41.</p></div></div><p>Power up the new VM, <span class="legacy-color-text-red2"><strong>log into it locally</strong></span> <em>(root password is still 'hadoop')</em>, and then make the following changes to configure the appropriate hostname and IP address for each additional node.</p><ul><li>Modify <code>HWADDR</code> in <code>/etc/sysconfig/network-scripts/ifcfg-eth0</code> to be what the <strong>MAC Address</strong> is set to for the <strong>Adapter 1</strong> interface as shown in the example below.</li></ul><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="HWADDR.jpg" data-unresolved-comment-count="0" data-linked-resource-id="19693579" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="80fe4f8b-1a6d-4952-8988-025c8d24f838" data-media-type="file" /></span></p><ul><li>Modify <code>IPADDR</code> in <code>/etc/sysconfig/network-scripts/ifcfg-eth1</code> to be the appropriate IP address (example: 192.168.56.42).</li><li>Modify <code>HOSTNAME</code> in <code>/etc/sysconfig/network</code> to be the correct fully-qualified hostname (example: m2.hdp2).</li><li>Set the hostname as described in the earlier 'Set the Hostname' section (example: run <code>hostname m2.hdp2</code> and verify by typing <code>hostname -f</code> to see it displayed).</li><li>Delete the <code>/etc/udev/rules.d/70-persistent-net.rules</code> file.</li><li>Execute <code>shutdown -r now</code> to reboot the VM.</li></ul><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-EnsureConnectivityBetweenNodes">Ensure Connectivity Between Nodes</h2><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>The <strong>5N-HDP2-M1</strong> VM can now be brought back up for connectivity testing as there will not be a collision on the 192.168.56.41 address.</p></div></div><p>Make an ssh connection to the new cluster node from the host OS and once there ping the first master node &amp; any other operational cluster nodes as well as an internet address.&nbsp; Then verify the correct hostname is assigned to the newly created node.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">hw10653:~ lmartin$ ssh root@192.168.56.42
+root@192.168.56.42's password: 
+Last login: Sat Jan 18 22:21:24 2014 from 192.168.56.1
+[root@m2 ~]# 
+[root@m2 ~]# ping 192.168.56.1
+PING 192.168.56.1 (192.168.56.1) 56(84) bytes of data.
+64 bytes from 192.168.56.1: icmp_seq=1 ttl=64 time=0.176 ms
+64 bytes from 192.168.56.1: icmp_seq=2 ttl=64 time=0.249 ms
+^C
+--- 192.168.56.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1440ms
+rtt min/avg/max/mdev = 0.176/0.212/0.249/0.039 ms
+[root@m2 ~]# 
+[root@m2 ~]# ping m1.hdp2
+PING m1.hdp2 (192.168.56.41) 56(84) bytes of data.
+64 bytes from m1.hdp2 (192.168.56.41): icmp_seq=1 ttl=64 time=1.16 ms
+64 bytes from m1.hdp2 (192.168.56.41): icmp_seq=2 ttl=64 time=0.394 ms
+^C
+--- m1.hdp2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1431ms
+rtt min/avg/max/mdev = 0.394/0.777/1.160/0.383 ms
+[root@m2 ~]# 
+[root@m2 ~]# ping www.google.com
+PING www.google.com (173.194.115.49) 56(84) bytes of data.
+64 bytes from dfw06s40-in-f17.1e100.net (173.194.115.49): icmp_seq=1 ttl=63 time=54.8 ms
+64 bytes from dfw06s40-in-f17.1e100.net (173.194.115.49): icmp_seq=2 ttl=63 time=144 ms
+^C
+--- www.google.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1517ms
+rtt min/avg/max/mdev = 54.879/99.851/144.824/44.973 ms
+[root@m2 ~]# 
+[root@m2 ~]# hostname -f
+m2.hdp2
+[root@m2 ~]# </pre>
+</div></div><p>Now verify the password-less SSH connectivity is working between nodes.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">hw10653:~ lmartin$ ssh root@192.168.56.42
+root@192.168.56.42's password: 
+Last login: Sat Jan 18 22:21:34 2014 from 192.168.56.1
+[root@m2 ~]# 
+[root@m2 ~]# ssh m1.hdp2
+Last login: Sat Jan 18 22:09:13 2014 from m2.hdp2
+[root@m1 ~]# 
+[root@m1 ~]# ssh m2.hdp2
+Last login: Sat Jan 18 22:32:01 2014 from 192.168.56.1
+[root@m2 ~]# </pre>
+</div></div><h2 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-Rinse,Lather,andRepeat...">Rinse, Lather, and Repeat...</h2><p>Go back to the beginning of this <a href="#RemainingNodes">Remaining Nodes</a> section and repeat all of the steps for each cluster node that still needs to be created, configured, and tested.</p><h1 id="buildingavirtualized5-nodeHDP2.0cluster(allwithinamac)-InstallClusterviaAmbari">Install Cluster via Ambari</h1><p>Now it is time to get down to the business at hand; setting up a Hadoop cluster.&nbsp; We'll make it easy by using the Ambari installer.&nbsp; The instructions are at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-1.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap1-1.html</a>.&nbsp; Fortunately, we did much of the &quot;prep&quot; work already.&nbsp;</p><p>Perform all the CLI operations on m1.hdp2 as this is the box where we will be running Ambari.&nbsp; After you run <code>yum install wget</code>, you can pick up at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap2-1.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap2-1.html</a> and drop the bits some place like <strong>/tmp</strong>.&nbsp; Just keep rolling, the instructions are rock-solid.&nbsp; For our simple case, take all the defaults and skip the optional steps.</p><p>Don't stop ambari-server as shown in <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap2-3.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap2-3.html</a> as we're ready to start up the Ambari UI which should now be available at <a class="external-link" href="http://192.168.56.41:8080" rel="nofollow">http://192.168.56.41:8080</a>.&nbsp; As <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap3-1_2x.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_using_Ambari_book/content/ambari-chap3-1_2x.html</a> states, the username/password is admin/admin.</p><p>When asked, name the cluster 'hdp2' and continue to follow the documentation.&nbsp; On the <strong>Install Options</strong> screen, paste the contents from <code>/root/.ssh/id_rsa</code> including the &quot;BEGIN&quot; and &quot;END&quot; lines in the <strong>SSH Private Key</strong> textbox so the screen looks like the following.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="InstallOptions.png" data-unresolved-comment-count="0" data-linked-resource-id="19988481" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="23ee9607-cb04-4bb8-bf04-293677bd9b83" data-media-type="file" /></span></p><p>After you click on the <strong>Register and Confirm</strong> button you will see the following <strong>Warning</strong> screen.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="Warning.png" data-unresolved-comment-count="0" data-linked-resource-id="19988482" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="d254544d-6bc5-475e-ba1b-6dad8c7ecc82" data-media-type="file" /></span></p><p>Just click <strong>OK</strong>.&nbsp; After all hosts have been registered, uncheck <strong>Nagios</strong>, <strong>Ganglia</strong>, and <strong>HBase</strong> on the <strong>Choose Services</strong> page. Just clear the <strong>Limited Functionality Warning</strong> message that surfaces.</p><p>The <strong>Assign Masters</strong> screen defaulted to deploying the <strong>NameNode</strong>, <strong>SNameNode</strong>, and <strong>ResourceManager</strong> as visualized at the beginning of this document.&nbsp; If yours looks different than below, then adjust to fit this approach.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="AssignMasters.png" data-unresolved-comment-count="0" data-linked-resource-id="19988485" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="41df2855-cc56-4c0f-be3b-89bb3510019e" data-media-type="file" /></span></p><p>Configure the <strong>Assign Slaves and Clients</strong> screen to look like the following.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="AssignSlavesAndClients.png" data-unresolved-comment-count="0" data-linked-resource-id="19988486" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="c6dce4bf-3edd-4cf5-8756-d3cd056c66cf" data-media-type="file" /></span></p><p>To clear the error messages on the <strong>Customize Services</strong> screen, select the <strong>Hive</strong> tab and type in &quot;hadoop&quot; (twice) for the <strong>Default Password</strong> field.&nbsp; Then do the exact same for the <strong>Oozie</strong> tab.&nbsp; Take the default options on everything else and press <strong>OK</strong>.&nbsp; The press <strong>Deploy</strong> on the <strong>Review</strong> page <em>(again, I hope you're following along in the Hortonworks docs)</em>.&nbsp; Now let the <strong>Install, Start and Test</strong> screen do its magic.</p><p><em>BTW; there is a LOT to be done so it will take some time.</em>&nbsp; <strong>In fact, some time-outs may occur and may surface as failures as the screenshot below showed I received.</strong></p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="InstallFailed.png" data-unresolved-comment-count="0" data-linked-resource-id="19988487" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="19431466" data-linked-resource-container-version="36" data-media-id="35a741a0-a594-4e7d-bfde-b3e112a0123f" data-media-type="file" /></span></p><p>Hit the <strong>Retry</strong> button again!&nbsp; <em>I was lucky, I only had to do that once before getting a screen full of green bars, but it did take a looooooooooooooong time to finish and I heard the fans on my MacBook Pro spinning up quite loud.</em></p><p>Lastly, we want to enable the base Ambari daemons to kick up at machine start up time so do the following.</p><ul><li>On m1.hdp2 (i.e. where Ambari itself runs), type <code>chkconfig ambari-server on</code>.</li><li>On all machines, including m1.hdp2, type <code>chkconfig ambari-agent on</code>.</li></ul><p><em><strong>There you have it... as <a class="external-link" href="http://192.168.56.41:8080" rel="nofollow">http://192.168.56.41:8080</a> shows, you have a fully functional cluster with 2 master nodes and 3 worker nodes!!&nbsp;</strong> </em></p>
+</body>
+</html>

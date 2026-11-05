@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>confluence column width hack (where have you been!?!?)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>confluence column width hack (where have you been!?!?)</h1>
+<p class="meta">2014-01-30 &middot; Lester Martin</p>
+<p>First up, this post has a very limited audience thus I won't do my normal promotional blast to my worked-oriented <a class="external-link" href="http://www.linkedin.com/in/lestermartin" rel="nofollow">LinkedIn</a> and <a class="external-link" href="http://facebook.com/lester.martin.professional" rel="nofollow">Facebook</a> profiles.  <strong>This is something only those who use <a class="external-link" href="https://www.atlassian.com/software/confluence" rel="nofollow">Confluence</a> could appreciate.</strong></p><p>The <a class="external-link" href="https://answers.atlassian.com/questions/181058/is-there-a-way-to-resize-the-columns-of-a-table-on-confluence" rel="nofollow">is there a way to resize the columns of a table on Confluence?</a> discussion thread raises the dirty little secret that you can't.  Well, not without installing a plug-in.  But then, just before I gave up on it I saw the following instructions at the bottom courtesy of <a class="external-link" href="https://answers.atlassian.com/" rel="nofollow">Atlassian Answers</a> user <a class="external-link" href="https://answers.atlassian.com/users/3962/manthony/" rel="nofollow">manthony</a>.</p><div class="confluence-information-macro confluence-information-macro-tip conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="tip"><span class="aui-icon aui-icon-small aui-iconfont-approve confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p style="text-align: left;">Total hack but it works and without a plugin.</p><ol style="text-align: left;"><li>Go to the column you want set.</li><li>Edit the first sentence of the heading (or one that is kind of long).</li><li>Locate a space between two words &quot;foo bar&quot; so the space between foo and bar.</li><li>Select the space.</li><li>Insert &lt; Symbol.</li><li><a class="external-link" href="https://www.evernote.com/shard/s254/sh/8305f3ed-5e1f-4828-9d82-d3b5221ad791/62828a8e9d085269ae4240038c68c6a3" rel="nofollow" style="text-decoration: none;">Choose the first symbol which is invisible</a> because it is a no-break space.<br />The system pastes it in there.</li><li>Repeat for the rest of the spaces in <em><strong>just that first sentence</strong></em>.</li></ol><p style="text-align: left;">There you have it, the hacky way to do this. What this does is fools Confluence into thinking thatfirstsentenceisjustonelongstringofcharacters.</p></div></div><p style="text-align: left;"><strong>Thanks, manthony, it really works!!</strong></p>
+</body>
+</html>

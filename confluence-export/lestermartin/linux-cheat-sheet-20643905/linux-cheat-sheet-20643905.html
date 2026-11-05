@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux Cheat Sheet</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>Linux Cheat Sheet</h1>
+<p class="meta">2014-02-19 &middot; Lester Martin</p>
+<p><a class="external-link" href="http://blog.pluralsight.com/linux-add-user-command" rel="nofollow">Adding Users and Groups</a> - <a class="external-link" href="http://linux.die.net/man/8/usermod" rel="nofollow">usermod man page</a></p><p>&quot;screen&quot; can manage long-lived sessions via SSH</p><p><a class="external-link" href="http://blog.remibergsma.com/2013/05/04/one-liner-to-remove-an-incorrect-entry-in-the-ssh-known_hosts-file/" rel="nofollow">One-liner to remove an incorrect entry in the SSH known_hosts file</a></p><p><a class="external-link" href="http://www.cyberciti.biz/faq/unix-creating-symbolic-link-ln-command/" rel="nofollow">Symbolic links</a></p><p><a class="external-link" href="http://www.tecmint.com/18-tar-command-examples-in-linux/" rel="nofollow">Tar Command Examples</a></p><p><a class="external-link" href="https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/3/html/Security_Guide/s1-server-ports.html" rel="nofollow">Verifying Which Ports Are Listening</a></p><p><a class="external-link" href="http://preilly.me/2013/05/10/how-to-install-maven-on-centos/" rel="nofollow">Installing Maven on CentOS</a></p><p><a class="external-link" href="http://nerderati.com/2011/03/simplify-your-life-with-an-ssh-config-file/" rel="nofollow">Simplifying Your Life With an SSH Config File</a></p><p><a class="external-link" href="http://www.tecmint.com/18-tar-command-examples-in-linux/" rel="nofollow">18 Tar Command Examples in Linux</a></p><p><a class="external-link" href="http://alvinalexander.com/unix/edu/examples/find.shtml" rel="nofollow">A collection of Unix/Linux find command examples</a></p><p><a class="external-link" href="http://www.tecmint.com/rsync-local-remote-file-synchronization-commands/" rel="nofollow">rsync examples</a></p><p><a class="external-link" href="https://www.digitalocean.com/community/articles/how-to-set-up-and-use-yum-repositories-on-a-centos-6-vps" rel="nofollow">How To Set Up and Use Yum Repositories on a CentOS 6 VPS</a></p><p><a class="external-link" href="http://www.cyberciti.biz/faq/howto-install-ntp-to-synchronize-server-clock/" rel="nofollow">Installing/Updating NTP Service on CentOS</a></p><p><a class="external-link" href="http://brianflove.com/2013/10/23/os-x-mavericks-and-apache/" rel="nofollow">OS X Mavericks and Apache</a></p><p><a class="external-link" href="http://techblog.netflix.com/2015/11/linux-performance-analysis-in-60s.html" rel="nofollow">Linux Performance Analysis in 60,000 Milliseconds</a></p><p>Secure Copy</p><p style="margin-left: 30.0px;"><code>scp sourceFile destinationFile</code> where the &quot;files&quot; use the following convention if they are remote; <code>user@host:file</code></p><p style="margin-left: 60.0px;">example of copying a remote file to the current (local) directory; <code>scp <a class="external-link" href="mailto:hdpdemo@hdp-demo-data9.cloudapp.net" rel="nofollow">hdpdemo@hdp-demo-data9.cloudapp.net</a>:/usr/hdp/current/hadoop-client/hadoop-common.jar .</code></p><p>Services</p><ul><li>Stop/Start/Restart services; see example for MySQL at <a class="external-link" href="http://theos.in/desktop-linux/tip-that-matters/how-do-i-restart-mysql-server/" rel="nofollow">http://theos.in/desktop-linux/tip-that-matters/how-do-i-restart-mysql-server/</a><ul><li>Good help with failures for MySQL start up at <a class="external-link" href="http://stackoverflow.com/questions/20407292/centos-another-mysql-daemon-already-running-with-the-same-unix-socket" rel="nofollow">http://stackoverflow.com/questions/20407292/centos-another-mysql-daemon-already-running-with-the-same-unix-socket</a></li></ul></li><li><a class="external-link" href="http://www.cyberciti.biz/faq/check-running-services-in-rhel-redhat-fedora-centoslinux/" rel="nofollow">Check/List running services</a></li></ul><p>Removing a string from the front of all files names (ex: maybe you have Photo_9999.jpg looking file names) in current directory</p><p style="margin-left: 30.0px;"><code>rename &quot;Photo_&quot; &quot;&quot; *</code></p><h4 id="LinuxCheatSheet-Contentlabeledwith&quot;linux&quot;">Content labeled with &quot;linux&quot;</h4><p>
+
+
+
+
+
+
+
+
+
+
+
+    
+    <ul class="content-by-label conf-macro output-block" data-hasbody="false" data-macro-id="3445f5ba-353c-483e-a90c-35069d320647" data-macro-name="contentbylabel">
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="99267877" data-linked-resource-id="99267877" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="../noclassdeffounderror-for-log4jloggerfactory-on-hdp-2-5-3-whe-99267877/noclassdeffounderror-for-log4jloggerfactory-on-hdp-2-5-3-whe-99267877.html">NoClassDefFoundError for Log4jLoggerFactory on hdp 2.5.3 when running the KafkaSpout in your topology? (how's that for a title?)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="10584067"><a class="aui-label-split-main" href="/wiki/label/debugging" rel="tag">debugging</a></li><li class="aui-label " data-label-id="9338894"><a class="aui-label-split-main" href="/wiki/label/java" rel="tag">java</a></li><li class="aui-label " data-label-id="23691268"><a class="aui-label-split-main" href="/wiki/label/storm" rel="tag">storm</a></li><li class="aui-label " data-label-id="31358978"><a class="aui-label-split-main" href="/wiki/label/kafka" rel="tag">kafka</a></li><li class="aui-label " data-label-id="99268147"><a class="aui-label-split-main" href="/wiki/label/maven" rel="tag">maven</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="27557889"><a class="aui-label-split-main" href="/wiki/label/streaming" rel="tag">streaming</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="99032194" data-linked-resource-id="99032194" data-linked-resource-type="blogpost" data-linked-resource-version="2" href="../opening-up-a-port-on-centos-7-firewall-using-firewalld-99032194/opening-up-a-port-on-centos-7-firewall-using-firewalld-99032194.html">opening up a port on centos 7 firewall (using firewalld)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="29622273"><a class="aui-label-split-main" href="/wiki/label/security" rel="tag">security</a></li><li class="aui-label " data-label-id="20840456"><a class="aui-label-split-main" href="/wiki/label/centos" rel="tag">centos</a></li><li class="aui-label " data-label-id="20840455"><a class="aui-label-split-main" href="/wiki/label/redhat" rel="tag">redhat</a></li><li class="aui-label " data-label-id="10584067"><a class="aui-label-split-main" href="/wiki/label/debugging" rel="tag">debugging</a></li><li class="aui-label " data-label-id="31358978"><a class="aui-label-split-main" href="/wiki/label/kafka" rel="tag">kafka</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="68648972" data-linked-resource-id="68648972" data-linked-resource-type="blogpost" data-linked-resource-version="2" href="../unboxing-my-new-little-box-my-first-intel-nuc-68648972/unboxing-my-new-little-box-my-first-intel-nuc-68648972.html">unboxing my new little box (my first intel nuc)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="68812801"><a class="aui-label-split-main" href="/wiki/label/ubuntu" rel="tag">ubuntu</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="62652426" data-linked-resource-id="62652426" data-linked-resource-type="blogpost" data-linked-resource-version="2" href="../performing-a-non-root-ambari-install-with-hortonworks-admin--62652426/performing-a-non-root-ambari-install-with-hortonworks-admin--62652426.html">performing a non-root ambari install (with hortonworks admin 1 course)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="20119553"><a class="aui-label-split-main" href="/wiki/label/ambari" rel="tag">ambari</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="45580306" data-linked-resource-id="45580306" data-linked-resource-type="blogpost" data-linked-resource-version="7" href="../hadoop-mount-points-more-art-than-science-45580306/hadoop-mount-points-more-art-than-science-45580306.html">hadoop mount points (more art than science)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="23691275"><a class="aui-label-split-main" href="/wiki/label/zookeeper" rel="tag">zookeeper</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="42663952" data-linked-resource-id="42663952" data-linked-resource-type="blogpost" data-linked-resource-version="6" href="../trying-out-hive-testbench-on-hdp-sandbox-and-packaging-it-up-42663952/trying-out-hive-testbench-on-hdp-sandbox-and-packaging-it-up-42663952.html">trying out hive testbench on hdp sandbox (and packaging it up for deployment elsewhere)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="42860545"><a class="aui-label-split-main" href="/wiki/label/tpc" rel="tag">tpc</a></li><li class="aui-label " data-label-id="42860546"><a class="aui-label-split-main" href="/wiki/label/tpc-ds" rel="tag">tpc-ds</a></li><li class="aui-label " data-label-id="42860547"><a class="aui-label-split-main" href="/wiki/label/tpc-h" rel="tag">tpc-h</a></li><li class="aui-label " data-label-id="42860548"><a class="aui-label-split-main" href="/wiki/label/benchmarking" rel="tag">benchmarking</a></li><li class="aui-label " data-label-id="19791873"><a class="aui-label-split-main" href="/wiki/label/hive" rel="tag">hive</a></li><li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="21594114"><a class="aui-label-split-main" href="/wiki/label/hiveql" rel="tag">hiveql</a></li><li class="aui-label " data-label-id="9338885"><a class="aui-label-split-main" href="/wiki/labels/viewlabel.action?ids=9338885" rel="tag">big_data</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="19791874"><a class="aui-label-split-main" href="/wiki/label/sql" rel="tag">sql</a></li><li class="aui-label " data-label-id="43057153"><a class="aui-label-split-main" href="/wiki/label/testbench" rel="tag">testbench</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="42270731" data-linked-resource-id="42270731" data-linked-resource-type="blogpost" data-linked-resource-version="8" href="../installing-hdp-2-2-with-ambari-2-0-moving-to-the-amazon-clou-42270731/installing-hdp-2-2-with-ambari-2-0-moving-to-the-amazon-clou-42270731.html">installing hdp 2.2 with ambari 2.0 (moving to the amazon cloud)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="20119553"><a class="aui-label-split-main" href="/wiki/label/ambari" rel="tag">ambari</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="10584069"><a class="aui-label-split-main" href="/wiki/label/yarn" rel="tag">yarn</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="20840456"><a class="aui-label-split-main" href="/wiki/label/centos" rel="tag">centos</a></li><li class="aui-label " data-label-id="42467329"><a class="aui-label-split-main" href="/wiki/label/aws" rel="tag">aws</a></li><li class="aui-label " data-label-id="42467330"><a class="aui-label-split-main" href="/wiki/label/ec2" rel="tag">ec2</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="39944197" data-linked-resource-id="39944197" data-linked-resource-type="blogpost" data-linked-resource-version="19" href="../installing-hdp-2-2-with-ambari-2-0-moving-to-the-azure-cloud-39944197/installing-hdp-2-2-with-ambari-2-0-moving-to-the-azure-cloud-39944197.html">installing hdp 2.2 with ambari 2.0 (moving to the azure cloud)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="20119553"><a class="aui-label-split-main" href="/wiki/label/ambari" rel="tag">ambari</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="10584069"><a class="aui-label-split-main" href="/wiki/label/yarn" rel="tag">yarn</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="20840456"><a class="aui-label-split-main" href="/wiki/label/centos" rel="tag">centos</a></li><li class="aui-label " data-label-id="40173569"><a class="aui-label-split-main" href="/wiki/label/azure" rel="tag">azure</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="36044812" data-linked-resource-id="36044812" data-linked-resource-type="blogpost" data-linked-resource-version="8" href="../os-patching-your-hadoop-cluster-pre-post-rolling-upgrades-36044812/os-patching-your-hadoop-cluster-pre-post-rolling-upgrades-36044812.html">os patching your hadoop cluster (pre &amp; post rolling upgrades)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="20119553"><a class="aui-label-split-main" href="/wiki/label/ambari" rel="tag">ambari</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="30343169"><a class="aui-label-split-main" href="/wiki/label/ha" rel="tag">ha</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="34832466" data-linked-resource-id="34832466" data-linked-resource-type="blogpost" data-linked-resource-version="1" href="../a-lightning-quick-tutorial-on-pdsh-for-when-you-need-to-run--34832466/a-lightning-quick-tutorial-on-pdsh-for-when-you-need-to-run--34832466.html">a lightning quick tutorial on pdsh (for when you need to run the same command on many machines)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20840456"><a class="aui-label-split-main" href="/wiki/label/centos" rel="tag">centos</a></li><li class="aui-label " data-label-id="20840455"><a class="aui-label-split-main" href="/wiki/label/redhat" rel="tag">redhat</a></li><li class="aui-label " data-label-id="20840457"><a class="aui-label-split-main" href="/wiki/label/ssh" rel="tag">ssh</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="33456135" data-linked-resource-id="33456135" data-linked-resource-type="blogpost" data-linked-resource-version="5" href="../simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135/simple-hadoop-cluster-user-provisioning-process-simple-w-o-p-33456135.html">simple hadoop cluster user provisioning process (simple = w/o pam or kerberos)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="20840449"><a class="aui-label-split-main" href="/wiki/label/hdp" rel="tag">hdp</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="21594113"><a class="aui-label-split-main" href="/wiki/label/sandbox" rel="tag">sandbox</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="17268738"><a class="aui-label-split-main" href="/wiki/label/hortonworks" rel="tag">hortonworks</a></li><li class="aui-label " data-label-id="29622273"><a class="aui-label-split-main" href="/wiki/label/security" rel="tag">security</a></li><li class="aui-label " data-label-id="20840457"><a class="aui-label-split-main" href="/wiki/label/ssh" rel="tag">ssh</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="32440334" data-linked-resource-id="32440334" data-linked-resource-type="blogpost" data-linked-resource-version="2" href="../hadoop-worker-node-configuration-recommendations-1-2-10-32440334/hadoop-worker-node-configuration-recommendations-1-2-10-32440334.html">hadoop worker node configuration recommendations (1-2-10)</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="21266433"><a class="aui-label-split-main" href="/wiki/label/apache" rel="tag">apache</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="31358980"><a class="aui-label-split-main" href="/wiki/label/tuning" rel="tag">tuning</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-blogpost" title="Blog">Blog:</span>        </div>
+
+        <div class="details">
+                                <a id="27885570" data-linked-resource-id="27885570" data-linked-resource-type="blogpost" data-linked-resource-version="11" href="../hadoop-superuser-you-can-have-more-than-hdfs-27885570/hadoop-superuser-you-can-have-more-than-hdfs-27885570.html">hadoop superuser (you can have more than 'hdfs')</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="9338893"><a class="aui-label-split-main" href="/wiki/label/hadoop" rel="tag">hadoop</a></li><li class="aui-label " data-label-id="10584068"><a class="aui-label-split-main" href="/wiki/label/hdfs" rel="tag">hdfs</a></li><li class="aui-label " data-label-id="21594115"><a class="aui-label-split-main" href="/wiki/label/tutorial" rel="tag">tutorial</a></li><li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+        <li>
+        <div>
+                <span class="icon aui-icon content-type-page" title="Page">Page:</span>        </div>
+
+        <div class="details">
+                                <a id="20643905" data-linked-resource-id="20643905" data-linked-resource-type="page" data-linked-resource-version="19" href="../linux-cheat-sheet-20643905/linux-cheat-sheet-20643905.html">Linux Cheat Sheet</a>
+                                             <span class="smalltext">(Lester Martin)</span>
+             
+                        
+                        <div class="label-details">
+                                
+                                
+    
+    <ul class="label-list ">
+                    
+        <li class="aui-label " data-label-id="20840453"><a class="aui-label-split-main" href="/wiki/label/linux" rel="tag">linux</a></li><li class="aui-label " data-label-id="20840455"><a class="aui-label-split-main" href="/wiki/label/redhat" rel="tag">redhat</a></li><li class="aui-label " data-label-id="20840456"><a class="aui-label-split-main" href="/wiki/label/centos" rel="tag">centos</a></li><li class="aui-label " data-label-id="20840457"><a class="aui-label-split-main" href="/wiki/label/ssh" rel="tag">ssh</a></li><li class="aui-label " data-label-id="10584065"><a class="aui-label-split-main" href="/wiki/label/unix" rel="tag">unix</a></li>
+            </ul>
+            </div>
+                    </div>
+    </li>
+    </ul>
+</p>
+</body>
+</html>

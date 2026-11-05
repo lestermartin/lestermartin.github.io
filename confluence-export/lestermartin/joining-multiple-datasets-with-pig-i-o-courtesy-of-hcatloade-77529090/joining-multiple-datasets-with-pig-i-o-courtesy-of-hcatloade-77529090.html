@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>joining multiple datasets with pig (i/o courtesy of hcatloader &amp; hcatstorer)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>joining multiple datasets with pig (i/o courtesy of hcatloader &amp; hcatstorer)</h1>
+<p class="meta">2016-08-08 &middot; Lester Martin</p>
+<p>My blogging has been drying up lately as I've mostly been focused on trying to add value within the Hortonworks Community Connection (HCC) forums where I ran into this question; <a class="external-link" href="https://community.hortonworks.com/questions/50243/pig-inner-join-with-different-keys.html" rel="nofollow">https://community.hortonworks.com/questions/50243/pig-inner-join-with-different-keys.html</a>.  This person was having trouble performing an inner join with Pig across four datasets.  This blog post is here to show that this is relatively easy with Pig.<br/><br/>First, let's create some datasets and load them into HDFS.  On these four files, I'll be joining on the first two columns of each so the output will only have three rows.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="770372c6-d799-4139-9102-b9c065383c18" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# ls
+T1.csv  T2.csv  T3.csv  T4.csv
+[root@sandbox hcc]# cat T1.csv 
+1,1,t1_A,t1_B
+1,2,t1_A,t1_B
+1,3,t1_A,t1_B
+[root@sandbox hcc]# cat T2.csv 
+1,1,t2_C,t2_D
+1,2,t2_C,t2_D
+1,3,t2_C,t2_D
+[root@sandbox hcc]# cat T3.csv 
+1,3,t3_E,t3_F
+1,2,t3_E,t3_F
+1,1,t3_E,t3_F
+[root@sandbox hcc]# cat T4.csv 
+1,3,t4_G,t4_H
+1,2,t4_G,t4_H
+1,1,t4_G,t4_H
+[root@sandbox hcc]# 
+[root@sandbox hcc]# hdfs dfs -mkdir /tmp/hcc
+[root@sandbox hcc]# hdfs dfs -put T1.csv T2.csv T3.csv T4.csv /tmp/hcc
+[root@sandbox hcc]# hdfs dfs -ls /tmp/hcc
+Found 4 items
+-rw-r--r--   1 root hdfs         42 2016-08-08 09:47 /tmp/hcc/T1.csv
+-rw-r--r--   1 root hdfs         42 2016-08-08 09:47 /tmp/hcc/T2.csv
+-rw-r--r--   1 root hdfs         42 2016-08-08 09:47 /tmp/hcc/T3.csv
+-rw-r--r--   1 root hdfs         42 2016-08-08 09:47 /tmp/hcc/T4.csv</pre>
+</div></div><p>Since we'll want to leverage <code>HCatLoader</code> (to pick up the schema definitions), let's create &amp; load some Hive tables in a quick way such as described in <a href="../hadoop-mini-smoke-test-very-mini-34832472/hadoop-mini-smoke-test-very-mini-34832472.html" data-linked-resource-id="34832472" data-linked-resource-version="1" data-linked-resource-type="blogpost">hadoop mini smoke test (VERY mini)</a> and is shown below.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0daa6060-5f89-4b28-a587-9823d84cf547" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>createLoadTables.hql</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Emacs" data-theme="Emacs">CREATE TABLE T1 (k1 int, k2 int, c1 string, c2 string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;
+LOAD DATA INPATH '/tmp/hcc/T1.csv' INTO TABLE T1;
+SELECT * FROM T1;
+
+CREATE TABLE T2 (k1 int, k2 int, c1 string, c2 string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;
+LOAD DATA INPATH '/tmp/hcc/T2.csv' INTO TABLE T2;
+SELECT * FROM T2;
+
+CREATE TABLE T3 (k1 int, k2 int, c1 string, c2 string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;
+LOAD DATA INPATH '/tmp/hcc/T3.csv' INTO TABLE T3;
+SELECT * FROM T3;
+
+CREATE TABLE T4 (k1 int, k2 int, c1 string, c2 string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;
+LOAD DATA INPATH '/tmp/hcc/T4.csv' INTO TABLE T4;
+SELECT * FROM T4;
+</pre>
+</div></div><p>Let's run those commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="3651453d-37e4-4469-b453-b5d00b6e2623" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# hive -f createLoadTables.hql 
+
+Loading data to table default.t1
+Table default.t1 stats: [numFiles=1, totalSize=42]
+OK
+1    1    t1_A    t1_B
+1    2    t1_A    t1_B
+1    3    t1_A    t1_B
+Time taken: 0.748 seconds, Fetched: 3 row(s)
+
+Loading data to table default.t2
+Table default.t2 stats: [numFiles=1, totalSize=42]
+OK
+1    1    t2_C    t2_D
+1    2    t2_C    t2_D
+1    3    t2_C    t2_D
+Time taken: 0.583 seconds, Fetched: 3 row(s)
+
+Loading data to table default.t3
+Table default.t3 stats: [numFiles=1, totalSize=42]
+OK
+1    3    t3_E    t3_F
+1    2    t3_E    t3_F
+1    1    t3_E    t3_F
+Time taken: 0.607 seconds, Fetched: 3 row(s)
+
+Loading data to table default.t4
+Table default.t4 stats: [numFiles=1, totalSize=42]
+OK
+1    3    t4_G    t4_H
+1    2    t4_G    t4_H
+1    1    t4_G    t4_H
+Time taken: 0.159 seconds, Fetched: 3 row(s)</pre>
+</div></div><p><strong>Now, let's write some Pig Latin to join these things up!!</strong></p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="01607cba-2480-44a1-b1b8-81be8fb23986" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>join.pig</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">t1 = LOAD 'T1' USING org.apache.hive.hcatalog.pig.HCatLoader();
+t2 = LOAD 'T2' USING org.apache.hive.hcatalog.pig.HCatLoader();
+t3 = LOAD 'T3' USING org.apache.hive.hcatalog.pig.HCatLoader();
+t4 = LOAD 'T4' USING org.apache.hive.hcatalog.pig.HCatLoader();
+
+joined = JOIN t1 BY (k1,k2), t2 BY (k1,k2),
+              t3 BY (k1,k2), t4 BY (k1,k2);
+
+DUMP joined;
+DESCRIBE joined;</pre>
+</div></div><p>Here's the output of this simple script.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="83c7ff5a-90b5-4f09-b63c-9fdcb8a43c8c" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# pig -x tez -useHCatalog join.pig
+
+Input(s):
+Successfully read 3 records (42 bytes) from: &quot;T3&quot;
+Successfully read 3 records (42 bytes) from: &quot;T4&quot;
+Successfully read 3 records (42 bytes) from: &quot;T1&quot;
+Successfully read 3 records (42 bytes) from: &quot;T2&quot;
+
+Output(s):
+Successfully stored 3 records (279 bytes) in: &quot;hdfs://sandbox:8020/tmp/temp-2066780368/tmp1329817571&quot;
+
+(1,1,t1_A,t1_B,1,1,t2_C,t2_D,1,1,t3_E,t3_F,1,1,t4_G,t4_H)
+(1,2,t1_A,t1_B,1,2,t2_C,t2_D,1,2,t3_E,t3_F,1,2,t4_G,t4_H)
+(1,3,t1_A,t1_B,1,3,t2_C,t2_D,1,3,t3_E,t3_F,1,3,t4_G,t4_H)
+
+joined: {t1::k1: chararray,t1::k2: chararray,t1::c1: chararray,t1::c2: chararray,t2::k1: chararray,t2::k2: chararray,t2::c1: chararray,t2::c2: chararray,t3::k1: chararray,t3::k2: chararray,t3::c1: chararray,t3::c2: chararray,t4::k1: chararray,t4::k2: chararray,t4::c1: chararray,t4::c2: chararray}</pre>
+</div></div><p>As you'll notice the schema's column names gets pretty detailed and basically show the lineage of where they came from with format of <code>origin_alias_name::original_column_name</code>.  If you'd like to store these results in a Hive table, then you will most likely need to project the join results into a relation that has the same schema of the Hive table you want to load into.  Here's a Hive table we can store this into.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="d2ae96a5-dae5-40a4-a98f-e044a73ef173" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>createResultsTable.hql</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Emacs" data-theme="Emacs">CREATE TABLE JOINED_RESULTS ( k1 int,
+    t1c1 string, t1c2 string, t2c1 string, t2c2 string,
+    t3c1 string, t3c2 string, t4c1 string, t4c2 string )
+PARTITIONED BY ( k2 int )
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+STORED AS TEXTFILE;</pre>
+</div></div><p>You'll notice I created a partition on this table.  I wasn't trying to be nasty; I just wanted to also address the concern of the HCC question I was looking at where this person wanted to store the results into a partitioned table.  In your Pig relation to be loaded into Hive, you'll need to put the partition column(s) at the end of the &quot;regular&quot; columns which creates a somewhat weird looking order of the columns since I used the second join key (i.e. k2) as the partition column.</p><p>We can now add the following lines to the earlier join.pig file to project the joined results into something that can be loaded into the new Hive table.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="b58a6754-cbc3-4129-ad8e-ec6047608ff7" data-macro-name="code" style="border-width: 1px;"><div class="codeHeader panelHeader pdl" style="border-bottom-width: 1px;"><b>(end of) joinAndSave.pig</b></div><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">prepIt = FOREACH joined GENERATE t1::k1 AS k1,
+    t1::c1 AS t1c1, t1::c2 AS t1c2, t2::c1 AS t2c1, t2::c2 AS t2c2,
+    t3::c1 AS t3c1, t3::c2 AS t3c2, t4::c1 As t4c1, t4::c2 AS t4c2,
+    t1::k2 AS k2;
+
+STORE prepIt INTO 'JOINED_RESULTS' 
+    USING org.apache.hive.hcatalog.pig.HCatStorer();</pre>
+</div></div><p>Then we can run this updated Pig script to do the join again and save it into the new Hive (partitioned) table.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="09c816f7-6064-41da-992f-d4f52db85861" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# pig -x tez -useHCatalog joinAndSave.pig
+
+Input(s):
+Successfully read 3 records (42 bytes) from: &quot;T2&quot;
+Successfully read 3 records (42 bytes) from: &quot;T1&quot;
+Successfully read 3 records (42 bytes) from: &quot;T3&quot;
+Successfully read 3 records (42 bytes) from: &quot;T4&quot;
+
+Output(s):
+Successfully stored 3 records (180 bytes) in: &quot;JOINED_RESULTS&quot;</pre>
+</div></div><p>We can also verify the results are correct in Hive.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="c2c4bc93-6861-4ad5-8284-b781464f7368" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# hive -e &quot;SELECT k1, k2, t1c1, t4c2 FROM JOINED_RESULTS&quot;
+OK
+1    1    t1_A    t4_H
+1    2    t1_A    t4_H
+1    3    t1_A    t4_H
+Time taken: 2.343 seconds, Fetched: 3 row(s)</pre>
+</div></div><p>Since we also made this problem more complicated by introducing a partitioned table, we can also see the underlying partitioned data being spread across three folders as well as one of the partitioned files' contents just to be sure.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="05bd58eb-bfd9-4a2b-b52e-ce09d56006a8" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@sandbox hcc]# hdfs dfs -ls -R /apps/hive/warehouse/joined_results
+drwxrwxrwx   - root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=1
+-rwxrwxrwx   1 root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=1/_SUCCESS
+-rwxrwxrwx   1 root hdfs         60 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=1/part-v004-o000-r-00000
+drwxrwxrwx   - root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=2
+-rwxrwxrwx   1 root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=2/_SUCCESS
+-rwxrwxrwx   1 root hdfs         60 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=2/part-v004-o000-r-00000
+drwxrwxrwx   - root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=3
+-rwxrwxrwx   1 root hdfs          0 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=3/_SUCCESS
+-rwxrwxrwx   1 root hdfs         60 2016-08-08 10:46 /apps/hive/warehouse/joined_results/k2=3/part-v004-o000-r-00000
+[root@sandbox hcc]# 
+[root@sandbox hcc]# hdfs dfs -cat /apps/hive/warehouse/joined_results/k2=3/part-v004-o000-r-00000
+&quot;1&quot;,&quot;t1_A&quot;,&quot;t1_B&quot;,&quot;t2_C&quot;,&quot;t2_D&quot;,&quot;t3_E&quot;,&quot;t3_F&quot;,&quot;t4_G&quot;,&quot;t4_H&quot;</pre>
+</div></div><div class="confluence-information-macro confluence-information-macro-warning conf-macro output-block" data-hasbody="true" data-macro-id="6e6e4033-2e35-4b9d-82bf-24ce1f193649" data-macro-name="warning"><span class="aui-icon aui-icon-small aui-iconfont-error confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p><a class="external-link" href="https://community.hortonworks.com/questions/2562/appending-to-existing-partition-with-pig.html" rel="nofollow">https://community.hortonworks.com/questions/2562/appending-to-existing-partition-with-pig.html</a> points out that Pig cannot write to an existing partition in this way and also suggests some approaches to work around that</p></div></div><p>While it got a tiny bit more complicated at the end when we wanted to save results back into a table (a partitioned one at that!!), the first bit of this post should make it clear that Pig's joining functions are relatively straightforward.  As always, a great place to check out is the docs themselves available at <a class="external-link" href="http://pig.apache.org/docs/r0.15.0/basic.html#join-inner" rel="nofollow">http://pig.apache.org/docs/r0.15.0/basic.html#join-inner</a> and <a class="external-link" href="http://pig.apache.org/docs/r0.15.0/basic.html#join-outer" rel="nofollow">http://pig.apache.org/docs/r0.15.0/basic.html#join-outer</a>.</p>
+</body>
+</html>

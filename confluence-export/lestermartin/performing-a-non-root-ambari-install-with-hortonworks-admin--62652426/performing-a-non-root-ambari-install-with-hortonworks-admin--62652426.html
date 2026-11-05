@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>performing a non-root ambari install (with hortonworks admin 1 course)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>performing a non-root ambari install (with hortonworks admin 1 course)</h1>
+<p class="meta">2016-04-19 &middot; Lester Martin</p>
+<div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="8f4621ef-410b-4fd0-a907-6a66e202b506" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>These instructions have been tested on Rev 1.2 of the <a class="external-link" href="http://hortonworks.com/training/class/hdp-operations-hadoop-administration-fundamentals/" rel="nofollow">HDP Operations: Hadoop Administration I</a> course.</p></div></div><p style="text-align: left;">These steps are captured to support a client who wants to do the <strong>Installing HDP</strong> lab from Hortonworks' <strong><em>Admin I</em> </strong>course, but use a non-<code>root</code> user for the install.  The current version of this course is based on HDP 2.3.0 and you can visit <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-2.1.1.0/bk_Installing_HDP_AMB/content/_set_up_password-less_ssh.html" rel="nofollow" style="text-decoration: none;">http://docs.hortonworks.com/HDPDocuments/Ambari-2.1.1.0/bk_Installing_HDP_AMB/content/_set_up_password-less_ssh.html</a> to see that the simple &amp; novel instructions for this are as follows.</p><p style="text-align: left;margin-left: 30.0px;"><em>It is possible to use a non-root SSH account, if that account can execute <code class="literal">sudo</code> without entering a password. </em></p><p style="text-align: left;">The good news is that for this lab (especially in the order it is now; at the END of the course) is only installing to <code>node1</code> which makes this much easier.  Basically, you just need to do some of the steps I previously publicly published in <a href="../setting-up-hdp-2-1-with-non-standard-users-for-hadoop-servic-23494834/setting-up-hdp-2-1-with-non-standard-users-for-hadoop-servic-23494834.html" data-linked-resource-id="23494834" data-linked-resource-version="27" data-linked-resource-type="blogpost">setting up hdp 2.1 with non-standard users for hadoop services (why not use a non-standard user for ambari, too)</a>.  Specifically, the following steps need to happen <em>just after</em> the <strong>Resetting the Lab Environment</strong> section and<em> just before</em> the <strong>Installing Ambari Server</strong> section.</p><p style="text-align: left;">From the <code>ubuntu</code> host, log into <code>node1</code> and create the user for the install.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="faa685ac-5d50-479a-87bc-532166ab615c" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">root@ubuntu:~# ssh node1
+Last login: Fri Sep 18 22:48:18 2015 from 172.17.42.1
+[root@node1 ~]# useradd -m -s /bin/bash ryoambari
+[root@node1 ~]# groupadd ryoambari
+groupadd: group 'ryoambari' already exists</pre>
+</div></div><p style="text-align: left;">This creates a user w/ID of 500, but we need to increase that.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="22f67ceb-a31e-4dbf-bb35-ad10fb410fed" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 ~]# id -u ryoambari
+500
+[root@node1 ~]# usermod -u 1500 ryoambari
+[root@node1 ~]# groupmod -g 1500 ryoambari
+[root@node1 ~]# id -u ryoambari
+1500</pre>
+</div></div><p style="text-align: left;">Now we need to make sure this new user can run password-less <code>sudo</code> commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="7c0af41a-90c1-4cf4-872f-f677a07a2ff2" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 ~]# cp /etc/sudoers ./sudoers.original
+[root@node1 ~]# visudo</pre>
+</div></div><p style="text-align: left;">Now that you are editing this file, go to the end and add the following line then save the file.  If using vi, you can just hit ESC twice, then type a colon and finally type <code>wq</code> to write &amp; quit.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="d70aeb43-f25c-40ed-8609-ff9a2766cc79" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">ALL	ALL=(ALL)	NOPASSWD: ALL</pre>
+</div></div><p style="text-align: left;">You can verify this is all that was changed by running a <code>diff</code> command whose results should look something like the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="6fd20936-5f27-4d5f-b202-26d1b1951ce2" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 ~]# diff sudoers.original /etc/sudoers
+118a119,120
+&gt; 
+&gt; ALL	ALL=(ALL)	NOPASSWD: ALL</pre>
+</div></div><p style="text-align: left;">Now, verify it worked by seeing if this new user can edit the <code>/etc/passwd</code> file (<em><strong>be sure to hit ESC twice, then type a colon and finally type <code>q!</code> to quit w/o saving!!</strong></em>).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="c546ecf9-a1dc-48a9-8da1-166c0721873e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 ~]# su - ryoambari
+[ryoambari@node1 ~]$ sudo vi /etc/passwd</pre>
+</div></div><p style="text-align: left;"><strong>NOTE: This is clearly a hack and not at all what one would do in a production environment to give this service account elevated privledges, but this brute-force approach lets us then perform the install with a non-<code>root</code> user.</strong></p><p style="text-align: left;">You will also need to be able to perform SSH connections to all the hosts (yes, we're only doing <code>node1</code>, but let's stick to the script) and this can be setup by running the following commands.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="4c9d3e55-017c-48e2-ba67-d4e28bf64540" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[ryoambari@node1 ~]$ sudo yum install openssh-clients
+
+	...
+
+Complete!
+[ryoambari@node1 ~]$ ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/ryoambari/.ssh/id_rsa): 
+Created directory '/home/ryoambari/.ssh'.
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /home/ryoambari/.ssh/id_rsa.
+Your public key has been saved in /home/ryoambari/.ssh/id_rsa.pub.
+The key fingerprint is:
+a8:60:cf:43:29:50:57:e9:0f:71:78:73:ae:b1:bc:11 ryoambari@node1
+The key's randomart image is:
++--[ RSA 2048]----+
+|  . ...o         |
+| . .  + + .      |
+|.    . + +       |
+| .   .o.E .      |
+|  + o .+S=       |
+| . * .  *        |
+|    =    o       |
+|     .  .        |
+|                 |
++-----------------+
+[ryoambari@node1 ~]$ cd .ssh
+[ryoambari@node1 .ssh]$ pwd
+/home/ryoambari/.ssh
+[ryoambari@node1 .ssh]$ ls -l
+total 8
+-rw------- 1 ryoambari ryoambari 1671 Apr 18 19:45 id_rsa
+-rw-r--r-- 1 ryoambari ryoambari  397 Apr 18 19:45 id_rsa.pub
+[ryoambari@node1 .ssh]$ cat id_rsa.pub &gt;&gt; authorized_keys
+[ryoambari@node1 .ssh]$ ls -l
+total 12
+-rw-rw-r-- 1 ryoambari ryoambari  397 Apr 18 19:46 authorized_keys
+-rw------- 1 ryoambari ryoambari 1671 Apr 18 19:45 id_rsa
+-rw-r--r-- 1 ryoambari ryoambari  397 Apr 18 19:45 id_rsa.pub
+[ryoambari@node1 .ssh]$ chmod 600 authorized_keys
+[ryoambari@node1 .ssh]$ ls -l
+total 12
+-rw------- 1 ryoambari ryoambari  397 Apr 18 19:46 authorized_keys
+-rw------- 1 ryoambari ryoambari 1671 Apr 18 19:45 id_rsa
+-rw-r--r-- 1 ryoambari ryoambari  397 Apr 18 19:45 id_rsa.pub
+[ryoambari@node1 .ssh]$ cd ..
+[ryoambari@node1 ~]$ ssh localhost
+The authenticity of host 'localhost (::1)' can't be established.
+RSA key fingerprint is 2e:0c:53:b1:d4:06:7d:ab:bd:79:f9:17:08:f2:8a:4b.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added 'localhost' (RSA) to the list of known hosts.
+[ryoambari@node1 ~]$ cd .ssh
+[ryoambari@node1 .ssh]$ echo 'StrictHostKeyChecking no' &gt;&gt; config
+[ryoambari@node1 .ssh]$ cat config
+StrictHostKeyChecking no
+[ryoambari@node1 .ssh]$ exit
+logout
+Connection to localhost closed.</pre>
+</div></div><p>Yep, that was a mouthful, but it is really sysadmin stuff that would need to be setup ahead of time to allow the <code>ryoadmin</code> non-<code>root</code> user to perform SSH operations to the other hosts.  The good news is that is customers don't want to do this, Ambari tells them that they can just do a <code>yum install ambari-agent</code> operation on all nodes and configure the .ini file to point back to the ambari server address, <em>but I digress...</em></p><p style="text-align: left;">At the beginning of the <strong>Installing Ambari Server</strong> section, go ahead and do steps 1 - 3 as <code>root</code> (i.e. type <code>exit</code> to ensure you are no longer <code>ryoambari</code>) which won't affect the scenario we are trying to test as these are specific to the course's lab environment and are not normal Ambari install activities.</p><p style="text-align: left;"><em><strong>PRIOR TO STEP 4</strong></em>, switch back to <code>ryoambari</code> and kick off the <code>yum</code> step to download and install the Ambari Server software, <strong>but prefix this operation with <code>sudo</code> since you are no longer <code>root</code></strong>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="8d147e86-98ec-4fae-a4fc-f6fc89299db2" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 scripts]# su - ryoambari
+[ryoambari@node1 ~]$ sudo yum -y install ambari-server
+
+	...
+
+Complete!</pre>
+</div></div><p>Once that is complete, you'll need to change back to <code>root</code> to be able to run the JDK copy script (again, this is special to this lab environment) in Step 5.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="e3ce1f87-76b2-473a-907f-10afa571cb49" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[ryoambari@node1 ~]$ pwd
+/home/ryoambari
+[ryoambari@node1 ~]$ exit
+logout
+[root@node1 scripts]# pwd
+/root/scripts
+[root@node1 scripts]# ./copy_jdk.sh</pre>
+</div></div><p>Then switch back to <code>ryoambari</code> for Step 6 and beyond, <strong>but realize these commands need to run with <code>sudo</code> prefixed to them as identified below</strong>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="beaed534-9720-483b-a542-ef61c3788de2" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Emacs" data-theme="Emacs">[root@node1 scripts]# su - ryoambari
+[ryoambari@node1 ~]$ sudo ambari-server setup -s
+
+	...
+
+Ambari Server 'setup' completed successfully.
+[ryoambari@node1 ~]$ sudo ambari-server start
+
+	...
+
+Ambari Server 'start' completed successfully.</pre>
+</div></div><p>This takes us to the <strong>Installing HDP</strong> section and we need to make a couple of changes in Step 10.  The &quot;SSH User Account&quot; textbox's value needs to change from <code>root</code> to <code>ryoambari</code> as shown in the following screenshot.  Additionally, you'll need to copy the contents of the <code>/home/ryoambari/.ssh/id_rsa</code> into the textbox identified below (include the BEGIN and END lines).</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="ryoambari.jpg" data-unresolved-comment-count="0" data-linked-resource-id="62652424" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/jpeg" data-linked-resource-container-id="62652426" data-linked-resource-container-version="2" data-media-id="9cef4bbd-6cea-40c3-b229-42947e9410cd" data-media-type="file"></span></p><p>At this point, the rest of the lab can be completed as is and you will have validated that you can install HDP with Ambari without needing access to the root user.</p><p><span class="confluence-embedded-file-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image" height="400" loading="lazy" src="running.png" data-unresolved-comment-count="0" data-linked-resource-id="62652427" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="62652426" data-linked-resource-container-version="2" data-media-id="d218ef36-c5f0-4c23-8f3f-349921907a33" data-media-type="file"></span></p><p><strong>NOTE: it is my recommendation that you simply take it as a fact that this can be done and not go through all of these steps to validate a documented and supported process.</strong></p>
+</body>
+</html>

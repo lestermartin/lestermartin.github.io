@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>manually installing hue (on my virtualized 5-node cluster)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>manually installing hue (on my virtualized 5-node cluster)</h1>
+<p class="meta">2014-04-08 &middot; Lester Martin</p>
+<p>I needed to manually install Hue on my little cluster I previousy documented in <a href="../build-a-virtualized-5-node-hadoop-2-0-cluster-19431466/build-a-virtualized-5-node-hadoop-2-0-cluster-19431466.html" data-linked-resource-id="19431466" data-linked-resource-version="36" data-linked-resource-type="page">Build a Virtualized 5-Node Hadoop 2.0 Cluster</a> so I thought I'd document it as I went just in case it worked (and if there were any tweaks from the documentation).  The Hortonworks Doc site URL for the instructions I used are at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue.html</a>.</p><p>One of the first things you get asked to do is to make sure Python 2.6 is installed.  I ran into the following issue below that suggested I couldn't get this rolling.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# yum install python26
+Loaded plugins: fastestmirror
+Loading mirror speeds from cached hostfile
+ * base: mirror.dattobackup.com
+ * extras: centos.someimage.com
+ * updates: mirror.beyondhosting.net
+Setting up Install Process
+No package python26 available.
+Error: Nothing to do</pre>
+</div></div><p>I'm pretty sure Ambari already laid this down so a quick double-check on the installed version was done on all my 5 nodes to verify I'm in good shape.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# which python
+/usr/bin/python
+[root@m1 ~]# python -V
+Python 2.6.6</pre>
+</div></div><p>When you get to the <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue-2.html" rel="nofollow">Configure HDP</a> page you'll be reminded that if you are using Ambari (like me) to NOT edit the conf files directly.  I used vi to check the existing files in <code>/etc/hadoop/conf</code> to see what needed to be done.  The single property for <code>hdfs-site.xml</code> was already in place as described.  For <code>core-site.xml</code>, the properties starting with <code>hadoop.proxyuser.hcat</code> where already present as shown below.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="hcatBefore.png" data-unresolved-comment-count="0" data-linked-resource-id="23003137" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22839304" data-linked-resource-container-version="17" data-media-id="98fe765c-3288-4841-bf28-adea0a29161f" data-media-type="file"></span></p><p>The next screenshot shows I changed them as described in the documentation.  The properties starting with <code>hadoop.proxyuser.hue</code> where not present (no surprise!) so I added them as described (and shown below).</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="hcatAfter.png" data-unresolved-comment-count="0" data-linked-resource-id="23003138" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22839304" data-linked-resource-container-version="17" data-media-id="86479b57-d6cf-4c69-9fe6-a216f9121db4" data-media-type="file"></span>I then used Ambari to add the <code>...hue.hosts</code> and <code>...hue.groups</code> custom properties for the <code>webhcat-site.xml</code> and <code>oozie-site.xml</code> conf files.  That took us to the <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue-3.html" rel="nofollow">Install Hue</a> instructions which I decided to run on my first master node and completed without problems.  When you get to <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue-5-1.html" rel="nofollow">Configure Web Server</a> steps 1-3 don't really require any action (remember, we're building a sandbox within a machine not a production ready cluster).  Step 4 was a tiny bit confusing, so I'm dumping my screen in case it helps.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 conf]# cd /usr/lib/hue/build/env/bin
+[root@m1 bin]# ./easy_install pyOpenSSL
+Searching for pyOpenSSL
+Best match: pyOpenSSL 0.13
+Processing pyOpenSSL-0.13-py2.6-linux-x86_64.egg
+pyOpenSSL 0.13 is already the active version in easy-install.pth
+
+Using /usr/lib/hue/build/env/lib/python2.6/site-packages/pyOpenSSL-0.13-py2.6-linux-x86_64.egg
+Processing dependencies for pyOpenSSL
+Finished processing dependencies for pyOpenSSL
+[root@m1 bin]# vi /etc/hue/conf
+[root@m1 bin]# vi /etc/hue/conf/hue.ini
+
+  ... MAKE THE CHANGES IN STEP 4-B ((I ALSO MADE A COPY OF THE .INI FILE FOR COMPARISON)) ...
+
+[root@m1 bin]# diff /etc/hue/conf/hue.ini.orig /etc/hue/conf/hue.ini
+70c70
+&lt;   ## ssl_certificate=
+---
+&gt;   ## ssl_certificate=$PATH_To_CERTIFICATE
+73c73
+&lt;   ## ssl_private_key=
+---
+&gt;   ## ssl_private_key=$PATH_To_KEY
+[root@m1 bin]# openssl genrsa 1024 &gt; host.key
+Generating RSA private key, 1024 bit long modulus
+.........................................................................++++++
+...................................................................++++++
+e is 65537 (0x10001)
+[root@m1 bin]# openssl req -new -x509 -nodes -sha1 -key host.key &gt; host.cert
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:US
+State or Province Name (full name) []:Georgia
+Locality Name (eg, city) [Default City]:Alpharetta
+Organization Name (eg, company) [Default Company Ltd]:Hortonworks
+Organizational Unit Name (eg, section) []:
+Common Name (eg, your name or your server's hostname) []:m1.hdp2
+Email Address []:lmartin@hortonworks.com
+[root@m1 bin]# </pre>
+</div></div><p>For sections 4.2 through 4.6 it looks like there was at least one problem (namely <code>hadoop_hdfs_home</code>) so I've dumped my screen again.  The following is aligned with the 5-node cluster I did previously.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 bin]# cd /etc/hue/conf
+[root@m1 conf]# vi hue.ini
+
+  ... MAKE THE CHANGES IN STEP 4.2 - 4.6 ((I ALSO MADE A COPY OF THE .INI FILE FOR COMPARISON)) ...
+
+[root@m1 conf]# diff hue.ini.orig hue.ini
+70c70
+&lt;   ## ssl_certificate=
+---
+&gt;   ## ssl_certificate=$PATH_To_CERTIFICATE
+73c73
+&lt;   ## ssl_private_key=
+---
+&gt;   ## ssl_private_key=$PATH_To_KEY
+238c238
+&lt;       fs_defaultfs=hdfs://localhost:8020
+---
+&gt;       fs_defaultfs=hdfs://m1.hdp2:8020
+243c243
+&lt;       webhdfs_url=http://localhost:50070/webhdfs/v1/
+---
+&gt;       webhdfs_url=http://m1.hdp2:50070/webhdfs/v1/
+251c251
+&lt;       ## hadoop_hdfs_home=/usr/lib/hadoop/lib
+---
+&gt;       ## hadoop_hdfs_home=/usr/lib/hadoop-hdfs
+298c298
+&lt;       resourcemanager_host=localhost
+---
+&gt;       resourcemanager_host=m2.hdp2
+319c319
+&lt;       resourcemanager_api_url=http://localhost:8088
+---
+&gt;       resourcemanager_api_url=http://m2.hdp2:8088
+322c322
+&lt;       proxy_api_url=http://localhost:8088
+---
+&gt;       proxy_api_url=http://m2.hdp2:8088
+325c325
+&lt;       history_server_api_url=http://localhost:19888
+---
+&gt;       history_server_api_url=http://m2.hdp2:19888
+328c328
+&lt;       node_manager_api_url=http://localhost:8042
+---
+&gt;       node_manager_api_url=http://m2.hdp2:8042
+338c338
+&lt;   oozie_url=http://localhost:11000/oozie
+---
+&gt;   oozie_url=http://m2.hdp2:11000/oozie
+377c377
+&lt;   ## beeswax_server_host=&lt;FQDN of Beeswax Server&gt;
+---
+&gt;   ## beeswax_server_host=m2.hdp2
+529c529
+&lt;   templeton_url=&quot;http://localhost:50111/templeton/v1/&quot;
+---
+&gt;   templeton_url=&quot;http://m2.hdp2:50111/templeton/v1/&quot;</pre>
+</div></div><p>The <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue-7.html" rel="nofollow">Start Hue</a> directions yielded the following output.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 conf]# /etc/init.d/hue start
+Detecting versions of components...
+HUE_VERSION=2.3.0-101
+HDP=2.0.6
+Hadoop=2.2.0
+HCatalog=0.12.0
+Pig=0.12.0
+Hive=0.12.0
+Oozie=4.0.0
+Ambari-server=1.4.3
+HBase=0.96.1
+Starting hue:                                              [  OK  ]</pre>
+</div></div><p>The instructions then go to <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.0.9.0/bk_installing_manually_book/content/rpm-chap-hue-8.html" rel="nofollow">Validate Configuration</a>, but since we stopped everything with Ambari earlier it is a great time to start up all the services before going to Hue URL which for me is <a class="external-link" href="http://192.168.56.41:8000." rel="nofollow">http://192.168.56.41:8000.</a></p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p><em>For reasons that will take longer to explain than I want to go into during this posting,</em> when replacing 'YourHostName' in <a class="external-link" href="http://YourHostName:8000" rel="nofollow">http://YourHostName:8000</a> to pull up Hue be sure to use a host name (or just the ip address) that all nodes within the cluster can access the node that Hue is running on.  <em>Buy me a Dr Pepper and I'll tell you all about it.</em></p></div></div><p>If you configured (or actually left the default configuration as it was) authentication like I did you will get this reminder when Hue comes up for the first time.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="hueLoginFirstTime.png" data-unresolved-comment-count="0" data-linked-resource-id="23003139" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22839304" data-linked-resource-container-version="17" data-media-id="fd769fb7-9cd5-4501-97b6-891eb2f672bc" data-media-type="file"></span></p><p>To keep my life easy, I just use <code>hue</code> and <code>hue</code> for the username and password.  I also ran a dir listing on HDFS before I logged in and after as shown below.  Notice that <code>/user/hue</code> was created after I logged in (group is <code>hue</code> as well).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# su hdfs
+[hdfs@m1 root]$ hadoop fs -ls /user
+Found 5 items
+drwxrwx---   - ambari-qa hdfs          0 2014-04-08 19:24 /user/ambari-qa
+drwxr-xr-x   - hcat      hdfs          0 2014-01-20 00:23 /user/hcat
+drwx------   - hdfs      hdfs          0 2014-03-20 23:00 /user/hdfs
+drwx------   - hive      hdfs          0 2014-01-20 00:23 /user/hive
+drwxrwxr-x   - oozie     hdfs          0 2014-01-20 00:25 /user/oozie
+[hdfs@m1 root]$ 
+[hdfs@m1 root]$ hadoop fs -ls /user
+Found 6 items
+drwxrwx---   - ambari-qa hdfs          0 2014-04-08 19:24 /user/ambari-qa
+drwxr-xr-x   - hcat      hdfs          0 2014-01-20 00:23 /user/hcat
+drwx------   - hdfs      hdfs          0 2014-03-20 23:00 /user/hdfs
+drwx------   - hive      hdfs          0 2014-01-20 00:23 /user/hive
+drwxr-xr-x   - hue       hue           0 2014-04-08 19:29 /user/hue
+drwxrwxr-x   - oozie     hdfs          0 2014-01-20 00:25 /user/oozie</pre>
+</div></div><p>My Hue UI came up fine without any misconfiguration detected so I decided to run through some of my prior blog postings to check things out.  I selected <a class="unresolved" href="#">how do i load a fixed-width formatted file into hive? (with a little help from pig)</a> since it exercises Pig and Hive pretty quick.</p><div class="confluence-information-macro confluence-information-macro-note conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="note"><span class="aui-icon aui-icon-small aui-iconfont-warning confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>For some reason, I could not get away with using the simple way to register the piggybank jar file shown in that quick tutorial.  I had to actually load it to HDFS, I put it at <code>/user/hue/jars/piggybank.jar</code>, then register as shown below and explained in more detail in the comments section of <a href="../create-and-share-a-pig-udf-anyone-can-do-it-22118411/create-and-share-a-pig-udf-anyone-can-do-it-22118411.html" data-linked-resource-id="22118411" data-linked-resource-version="6" data-linked-resource-type="blogpost">create and share a pig udf (anyone can do it)</a>.</p><p><code>REGISTER /user/hue/jars/piggybank.jar;  --that is an HDFS path</code></p></div></div><p>I got into trouble when I ran <code>convert-emp</code> and Hue's Pig interface complained for me to &quot;<code>Please initialize HIVE_HOME</code>&quot;.  You may not run into this problem yourself as the fix (which I actually got help from Hortonworks Support on as seen in <a href="/wiki/download/attachments/22839304/Case_00004924.pdf?version=3&amp;modificationDate=1399335571428&amp;cacheVersion=1&amp;api=v2" data-linked-resource-id="23363607" data-linked-resource-version="3" data-linked-resource-type="attachment" data-linked-resource-default-alias="Case_00004924.pdf" data-nice-type="PDF Document" data-linked-resource-content-type="application/pdf" data-linked-resource-container-id="22839304" data-linked-resource-container-version="17">Case_00004924.pdf</a>) was simply to add the Hive Client to all nodes within the cluster (this will be fixed in HDP 2.1).  As the ticket said, that would be painful if I had to do for tons of nodes, especially with the version of Ambari I'm using that does not yet allow you to do operations like this one many machines at a time.  That said, I just needed to add it to three workers via the Ambari feature show below.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="addClients.png" data-unresolved-comment-count="0" data-linked-resource-id="23363608" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="22839304" data-linked-resource-container-version="17" data-media-id="aebd5072-90f7-4a60-96a1-14b38e2ae73c" data-media-type="file"></span></p><p>Truthfully, on my little virtualized cluster this takes a few minutes for each host.  It will be nice when stuff like this can happen in parallel.  <em><strong>Hey... just another reason to add &quot;Clients&quot; to all nodes in the cluster!</strong></em></p><p>All in all, a bit more arduous than it ought to be, but now you have Hue running in your very own virtualized cluster!!</p>
+</body>
+</html>

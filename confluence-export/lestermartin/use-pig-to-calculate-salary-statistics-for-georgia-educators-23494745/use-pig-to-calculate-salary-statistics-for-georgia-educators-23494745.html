@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>use pig to calculate salary statistics for georgia educators (second of a three-part series)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>use pig to calculate salary statistics for georgia educators (second of a three-part series)</h1>
+<p class="meta">2014-04-30 &middot; Lester Martin</p>
+<p><span class="confluence-embedded-file-wrapper image-right-wrapper"><img class="confluence-embedded-image image-right" loading="lazy" src="pig.png" data-unresolved-comment-count="0" data-linked-resource-id="23724042" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494745" data-linked-resource-container-version="7" data-media-id="a4037e55-59a5-4e85-ac35-d319a99a63ee" data-media-type="file"></span>In this the second installment of a three-part series, I am going to show how to use <a class="external-link" href="http://pig.apache.org/" rel="nofollow">Apache Pig</a> to solve the same <a href="../simple-open-georgia-use-case-23494721/simple-open-georgia-use-case-23494721.html" data-linked-resource-id="23494721" data-linked-resource-version="2" data-linked-resource-type="page">Simple Open Georgia Use Case</a> that we did in <a href="../use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729/use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729.html" data-linked-resource-id="23494729" data-linked-resource-version="8" data-linked-resource-type="blogpost">use mapreduce to calculate salary statistics for georgia educators (first of a three-part series)</a>, but this time I'll do it with a lot less code.  Pig is a great &quot;data pipelining&quot; technology and our simple need to parse, filter, calculate statistics, sort, and then save the <a href="../format-sample-data-for-open-georgia-23494709/format-sample-data-for-open-georgia-23494709.html" data-linked-resource-id="23494709" data-linked-resource-version="2" data-linked-resource-type="page">Format &amp; Sample Data for Open Georgia</a> is right up its alley.</p><p><em>Be sure to check out the write-up at <a href="../open-georgia-analysis-19857431/open-georgia-analysis-19857431.html" data-linked-resource-id="19857431" data-linked-resource-version="19" data-linked-resource-type="page">Open Georgia Analysis</a> to ensure you have the right context before going on in this posting.  This will drive you to <a href="../preparing-open-georgia-test-data-23494713/preparing-open-georgia-test-data-23494713.html" data-linked-resource-id="23494713" data-linked-resource-version="4" data-linked-resource-type="page">Preparing Open Georgia Test Data</a> to help you generate (or just download) a sample dataset to perform analysis on.  You will also want to make sure you have a working copy of the <a class="external-link" href="http://hortonworks.com/products/hortonworks-sandbox/" rel="nofollow">Hortonworks Sandbox</a> to do your testing with.</em></p><p>The Pig code is also in the <a href="../github-lestermartin-hadoop-exploration-18710599/github-lestermartin-hadoop-exploration-18710599.html" data-linked-resource-id="18710599" data-linked-resource-version="6" data-linked-resource-type="page">GitHub &gt; lestermartin &gt; hadoop-exploration</a> project and the script itself can be found at <a class="external-link" href="https://github.com/lestermartin/hadoop-exploration/blob/master/src/main/pig/opengeorgia/TitleStatisticsForSchoolsIn2010.pig" rel="nofollow">TitleStatisticsForSchoolsIn2010.pig</a>.  To replace the five classes described in the <a href="../lestermartin-hadoop-exploration-opengeorgia-23494707/lestermartin-hadoop-exploration-opengeorgia-23494707.html" data-linked-resource-id="23494707" data-linked-resource-version="6" data-linked-resource-type="page">lestermartin.hadoop.exploration.opengeorgia</a> package we used <strong>just 10 lines of Pig</strong> code as discussed below.</p><p>The first two lines are just some housekeeping activities.  I often have trouble with Hue's Pig UI and the <code>REGISTER</code> command so as the comments section of <a href="../create-and-share-a-pig-udf-anyone-can-do-it-22118411/create-and-share-a-pig-udf-anyone-can-do-it-22118411.html" data-linked-resource-id="22118411" data-linked-resource-version="6" data-linked-resource-type="blogpost">create and share a pig udf (anyone can do it)</a> shows, I usually solve this by putting my UDF jars on HDFS itself (including the &quot;piggybank&quot;).  You'll see the use of the <code>REPLACE</code> function in a bit.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- load up the base UDF (piggybank) and get a handle on the REPLACE function
+register /user/hue/shared/pig/udfs/piggybank.jar;
+define REPLACE org.apache.pig.piggybank.evaluation.string.REPLACE();</pre>
+</div></div><p>Then we simply load the CSV file that we have on HDFS into a structure we defined in-stream.  The <a class="external-link" href="http://pig.apache.org/docs/r0.12.0/api/org/apache/pig/piggybank/storage/CSVExcelStorage.html" rel="nofollow"><code>CSVExcelStorage</code></a> class is a lifesaver as you can see from <a class="external-link" href="https://github.com/lestermartin/hadoop-exploration/blob/master/src/main/java/lestermartin/hadoop/exploration/opengeorgia/SalaryReportBuilder.java" rel="nofollow"><code>SalaryReportBuilder</code></a> we weren't able to simple tokenize the input based on finding a comma.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- load the salary file and declare its structure
+inputFile = LOAD '/user/hue/opengeorgia/salaryTravelReport.csv'
+ using org.apache.pig.piggybank.storage.CSVExcelStorage()
+ as (name:chararray, title:chararray, salary:chararray, travel:chararray, orgType:chararray, org:chararray, year:int);</pre>
+</div></div><p>Since there is all kinds of mess in the Salary and Travel Expenses fields, I initially declared them as simple strings.  The next line does some light cleanup on these two values so I could cast them as floats.  I took out the dollar signs back in my <a href="../preparing-open-georgia-test-data-23494713/preparing-open-georgia-test-data-23494713.html" data-linked-resource-id="23494713" data-linked-resource-version="4" data-linked-resource-type="page">Preparing Open Georgia Test Data</a> notes, but if they were present it would be easy enough to strip them out just like I'm doing with the commas.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- loop thru the input data to clean up the number fields a bit
+cleanedUpNumbers = foreach inputFile GENERATE
+ name as name, title as title,
+ (float)REPLACE(salary, ',','') as salary,  -- take out the commas and cast to a float
+ (float)REPLACE(travel, ',','') as travel,  -- take out the commas and cast to a float
+ orgType as orgType, org as org, year as year;</pre>
+</div></div><p>The next three pipelining statements just toss out those records that don't meet the criteria of the <a href="../simple-open-georgia-use-case-23494721/simple-open-georgia-use-case-23494721.html" data-linked-resource-id="23494721" data-linked-resource-version="2" data-linked-resource-type="page">Simple Open Georgia Use Case</a> and the lump up all the data by the job title – very synonymous to what we explicitly did in <a href="../use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729/use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729.html" data-linked-resource-id="23494729" data-linked-resource-version="8" data-linked-resource-type="blogpost">use mapreduce to calculate salary statistics for georgia educators (first of a three-part series)</a> with our <a class="external-link" href="https://github.com/lestermartin/hadoop-exploration/blob/master/src/main/java/lestermartin/hadoop/exploration/opengeorgia/TitleMapper.java" rel="nofollow"><code>TitleMapper</code></a> class.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- trim down to just Local Boards of Education
+onlySchoolBoards = filter cleanedUpNumbers by orgType == 'LBOE';
+
+-- further trim it down to just be for the year in question
+onlySchoolBoardsFor2010 = filter onlySchoolBoards by year == 2010;
+
+-- bucket them up by the job title
+byTitle = GROUP onlySchoolBoardsFor2010 BY title;</pre>
+</div></div><p>Now we get down to the brass tacks of actually calculating the statistics we've been after.  The built-in functions make that easy enough.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- loop through the titles and for each one...
+salaryBreakdown = FOREACH byTitle GENERATE
+ group as title, -- we grouped on this above
+ COUNT(onlySchoolBoardsFor2010), -- how many people with this title
+ MIN(onlySchoolBoardsFor2010.salary), -- determine the min
+ MAX(onlySchoolBoardsFor2010.salary), -- determine the max
+ AVG(onlySchoolBoardsFor2010.salary); -- determine the avg</pre>
+</div></div><p>Truthfully, this final &quot;do something&quot; bit of code looks a lot like snippet below from <a class="external-link" href="https://github.com/lestermartin/hadoop-exploration/blob/master/src/main/java/lestermartin/hadoop/exploration/opengeorgia/SalaryStatisticsReducer.java" rel="nofollow">SalaryStatisticsReducer</a> that we built in <a href="../use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729/use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729.html" data-linked-resource-id="23494729" data-linked-resource-version="8" data-linked-resource-type="blogpost">use mapreduce to calculate salary statistics for georgia educators (first of a three-part series)</a>.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">        for(FloatWritable value : values) {
+            float salary = value.get();
+            numberOfPeopleWithThisJobTitle++;
+            totalSalaryAmount = totalSalaryAmount + salary;
+            if(salary &lt; minSalary)
+                minSalary = salary;
+            if(salary &gt; maxSalary)
+                maxSalary = salary;
+        }</pre>
+</div></div><p>Then we quickly make sure the output will be sorted the way we want it.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- guarantee the order on the way out
+sortedSalaryBreakdown = ORDER salaryBreakdown by title;</pre>
+</div></div><p>Lastly, line 10 writes the output file into HDFS.  There's a commented out alternative that simply displays the contents to the console (be it Hue in our case or the CLI if you're running the script that way).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">-- dump results to the UI
+--dump sortedSalaryBreakdown;
+
+-- save results back to HDFS
+STORE sortedSalaryBreakdown into '/user/hue/opengeorgia/pigoutput';</pre>
+</div></div><p>The following bit of confirmation log information was easy enough to get to from Hue's Pig UI.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: text; gutter: false; theme: Confluence" data-theme="Confluence">2014-04-30 04:35:01,442 [main] INFO  org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.MapReduceLauncher - 100% complete
+2014-04-30 04:35:01,532 [main] INFO  org.apache.pig.tools.pigstats.SimplePigStats - Script Statistics: 
+
+HadoopVersion	PigVersion	UserId	StartedAt	FinishedAt	Features
+2.2.0.2.0.6.0-76	0.12.0.2.0.6.0-76	yarn	2014-04-30 04:33:29	2014-04-30 04:35:01	GROUP_BY,ORDER_BY,FILTER
+
+Success!
+
+Job Stats (time in seconds):
+JobId	Maps	Reduces	MaxMapTime	MinMapTIme	AvgMapTime	MedianMapTime	MaxReduceTime	MinReduceTime	AvgReduceTime	MedianReducetime	Alias	Feature	Outputs
+job_1398691536449_0085	1	1	7	7	7	7	4	4	4	4	byTitle,cleanedUpNumbers,inputFile,onlySchoolBoards,salaryBreakdown	GROUP_BY,COMBINER	
+job_1398691536449_0086	1	1	4	4	4	4	3	3	3	3	sortedSalaryBreakdown	SAMPLER	
+job_1398691536449_0087	1	1	4	4	4	4	3	3	3	3	sortedSalaryBreakdown	ORDER_BY	/user/hue/opengeorgia/pigoutput,
+
+Input(s):
+Successfully read 76943 records (7613119 bytes) from: &quot;/user/hue/opengeorgia/salaryTravelReport.csv&quot;
+
+Output(s):
+Successfully stored 181 records (11278 bytes) in: &quot;/user/hue/opengeorgia/pigoutput&quot;
+
+Counters:
+Total records written : 181
+Total bytes written : 11278
+Spillable Memory Manager spill count : 0
+Total bags proactively spilled: 0
+Total records proactively spilled: 0</pre>
+</div></div><p>It confirms that same in/out counts that we saw in <a href="../use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729/use-mapreduce-to-calculate-salary-statistics-for-georgia-edu-23494729.html" data-linked-resource-id="23494729" data-linked-resource-version="8" data-linked-resource-type="blogpost">use mapreduce to calculate salary statistics for georgia educators (first of a three-part series)</a>; 76,943 input records and 181 output records.  Here's a snapshot of what the output file looks like from Hue's File Browser.</p><p><span class="confluence-embedded-file-wrapper"><img class="confluence-embedded-image" loading="lazy" src="pigOutput.png" data-unresolved-comment-count="0" data-linked-resource-id="23724043" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="23494745" data-linked-resource-container-version="7" data-media-id="83130e38-7579-416e-a018-485e7a2c3529" data-media-type="file"></span></p><p>As before, we were able to answer the <a href="../simple-open-georgia-use-case-23494721/simple-open-georgia-use-case-23494721.html" data-linked-resource-id="23494721" data-linked-resource-version="2" data-linked-resource-type="page">Simple Open Georgia Use Case</a> question.  Just as important, a close look at the output between this solution and the MapReduce one showed the spot-check values of the average salary for the 9 Audiologists is consistent at $73,038.71 (see above screenshot) as well as both correctly indicating that the highest paid 3rd Grade Teacher from this dataset is making $102,263.29.</p><p>The default answer for consulting is &quot;it depends&quot; is the same answer for questions about Hadoop.  When you put those together then the resounding answer for Hadoop consulting is &quot;IT DEPENDS&quot;, but I do feel <strong>for this particular <a href="../simple-open-georgia-use-case-23494721/simple-open-georgia-use-case-23494721.html" data-linked-resource-id="23494721" data-linked-resource-version="2" data-linked-resource-type="page">Simple Open Georgia Use Case</a> using the <a href="../format-sample-data-for-open-georgia-23494709/format-sample-data-for-open-georgia-23494709.html" data-linked-resource-id="23494709" data-linked-resource-version="2" data-linked-resource-type="page">Format &amp; Sample Data for Open Georgia</a> that Pig is a better solution than Java MapReduce</strong>.  That surely won't be the case always, but the simplicity of this Pig script surely makes it the winner for this situation when only looking at these two options.  <em>We'll just have to wait and see if the final installment of this series declares Hive an even better alternative than Pig to this problem.</em></p>
+</body>
+</html>

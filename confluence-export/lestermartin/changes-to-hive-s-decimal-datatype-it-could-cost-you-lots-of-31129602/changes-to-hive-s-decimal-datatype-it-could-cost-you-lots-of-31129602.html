@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>changes to hive&#x27;s decimal datatype (it could cost you lots of pennies)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>changes to hive&#x27;s decimal datatype (it could cost you lots of pennies)</h1>
+<p class="meta">2014-10-15 &middot; Lester Martin</p>
+<p>When a language, framework, tool, or product changes a basic datatype behavior, it is surely time to see how this might affect you.  Hive did such a thing when version 13 was introduced.  <span class="confluence-embedded-file-wrapper image-right-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-right" height="250" loading="lazy" src="swiper.png" data-unresolved-comment-count="0" data-linked-resource-id="31227905" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="31129602" data-linked-resource-container-version="2" data-media-id="4720fc5b-427b-4703-863c-e1d20299211c" data-media-type="file"></span></p><p>The issue is documented quite well on the Hive wiki write up for the <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types#LanguageManualTypes-Decimals" rel="nofollow">Decimal datatype</a>, but I give credit to <a class="external-link" href="http://kevin.risden.net/" rel="nofollow">Kevin Risden</a> who raised this concern up to a working group of Hadoop practitioners before it was documented on the wiki.  After an upgrade from Hive 12 to 13 he noticed that his tables that were using the Decimal datatype appeared to have no decimal values post upgrade.  The underlying data was fine; it just displayed incorrectly. </p><p>Again, these <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types#LanguageManualTypes-Decimals" rel="nofollow">Hive wiki details</a> explain in sufficient detail what happened and how it can be fixed with some <code>ALTER TABLE</code> commands, but this is one of those issues that I don't hear folks talking about much although it could be a big issue depending on your utilization of the data.</p><p>You will notice that you have to issue an <code>ALTER TABLE</code> command for each table as well as for every single partition (when present).  If you feel like you have an appropriate <code>DECIMAL(precision, scale)</code> setting that could address every Decimal datatype across your entire Hive instance, the <a class="external-link" href="https://streever.atlassian.net/wiki/display/HADOOP/" rel="nofollow">David Streever</a> has a <a class="external-link" href="https://github.com/dstreev/mapr-migration/blob/master/hive/decimal_pre-13_fix.sql" rel="nofollow">nice bit of SQL</a> that can take care of this in one quick action if you run it against the metastore's backing database.</p>
+</body>
+</html>

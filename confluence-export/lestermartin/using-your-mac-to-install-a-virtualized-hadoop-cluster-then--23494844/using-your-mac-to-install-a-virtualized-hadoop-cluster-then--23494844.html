@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>using your mac to install a virtualized hadoop cluster? (then setup a local repo on it)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>using your mac to install a virtualized hadoop cluster? (then setup a local repo on it)</h1>
+<p class="meta">2014-05-06 &middot; Lester Martin</p>
+<p>As seen in <a href="../building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444/building-a-virtualized-5-node-hdp-2-0-cluster-all-within-a-m-34832444.html" data-linked-resource-id="34832444" data-linked-resource-version="3" data-linked-resource-type="blogpost">building a virtualized 5-node HDP 2.0 cluster (all within a mac)</a> it is (relatively) easy to build a full-featured multi-node Hadoop cluster using virtualization technologies such as VirtualBox.  Obviously, I choose to install Hortonworks Data Platform (HDP) when I'm doing such an activity and I also leverage Ambari.  With my setup all my my nodes have access to the internet which lets each connect to the Hortonworks Public Repo when it needs it, but with multiple machines all pulling down the same binaries (all through the same physical pipe – often a wifi signal on my Mac) that process is often pretty slow.</p><p>Additionally, when setting up HDP in true bare-medal clusters in customer data centers it is more often the case that the nodes will not have internet access.  Most of these companies, have some kind of strategy for this already and can load up the needed binaries in their existing repos, but not always.  Either way, there are going to be times when setting up a local repository of your own will make your day; or, again, just make your VM-based clusters install much faster.  For all of that, Hortonworks has some pretty straight-forward directions at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-6.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/ambari-chap1-6.html</a>.</p><p>For me specifically, here's the steps I did to make my bare-medal Mac be that repository for the VMs I'm running within VirtualBox.  I &quot;obtained&quot; (i.e. I downloaded) the needed Ambari and HDP tarballs.  First, you want to make sure you have Apache running – here are some <a class="external-link" href="http://brianflove.com/2013/10/23/os-x-mavericks-and-apache/" rel="nofollow">instructions</a>.  Those instructions tell you how to make a home directory of your own, but I was lazy and just leveraged the box's /Library/WebServer/Documents root folder which has the &quot;It Works!&quot; html page in it.</p><p>Using sudo to keep the root ownership like seen in other files in that base directory I copied over the three tarballs and then did the following (some lines removed for clarity on what we are looking for).</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">HW10653:Documents lmartin$ pwd
+/Library/WebServer/Documents
+HW10653:Documents lmartin$ ls -ls
+4401536 -rw-r--r--@ 1 root  wheel  2253582541 May  7 12:38 HDP-2.1.2.0-centos6-rpm.tar.gz
+  42200 -rw-r--r--@ 1 root  wheel    21603097 May  7 12:38 HDP-UTILS-1.1.0.17-centos6.tar.gz
+  91144 -rw-r--r--@ 1 root  wheel    46662540 May  7 09:46 ambari-1.5.1-centos6.tar.gz
+HW10653:Documents lmartin$ sudo tar -xvf ambari-1.5.1-centos6.tar.gz 
+HW10653:Documents lmartin$ ls -l
+drwxr-xr-x  3 root  wheel       102 May  7 09:46 ambari
+-rw-r--r--@ 1 root  wheel  46662540 May  7 09:46 ambari-1.5.1-centos6.tar.gz
+HW10653:Documents lmartin$ sudo mkdir hdp
+HW10653:Documents lmartin$ sudo mv HDP*.gz ./hdp
+HW10653:Documents lmartin$ cd hdp
+HW10653:hdp lmartin$ ls -l
+-rw-r--r--@ 1 root  wheel  2253582541 May  7 12:38 HDP-2.1.2.0-centos6-rpm.tar.gz
+-rw-r--r--@ 1 root  wheel    21603097 May  7 12:38 HDP-UTILS-1.1.0.17-centos6.tar.gz
+HW10653:hdp lmartin$ sudo tar -xvf HDP-UTILS-1.1.0.17-centos6.tar.gz 
+HW10653:hdp lmartin$ sudo tar -xvf HDP-2.1.2.0-centos6-rpm.tar.gz 
+HW10653:hdp lmartin$ ls -l
+drwxr-xr-x  3 root  wheel         102 May  7 12:44 HDP
+-rw-r--r--@ 1 root  wheel  2253582541 May  7 12:38 HDP-2.1.2.0-centos6-rpm.tar.gz
+drwxr-xr-x  3 root  wheel         102 May  7 12:43 HDP-UTILS-1.1.0.17
+-rw-r--r--@ 1 root  wheel    21603097 May  7 12:38 HDP-UTILS-1.1.0.17-centos6.tar.gz
+HW10653:hdp lmartin$ </pre>
+</div></div><p>Then, as the Ambari instructions directed, I verified I could access the newly created local repositories from the master node I was creating.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# curl http://192.168.56.1
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;It works!&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;[root@m1 ~]# pwd
+/root
+[root@m1 ~]# curl http://192.168.56.1/ambari/centos6/1.x/updates/1.5.1
+&lt;!DOCTYPE HTML PUBLIC &quot;-//IETF//DTD HTML 2.0//EN&quot;&gt;
+&lt;html&gt;&lt;head&gt;
+&lt;title&gt;301 Moved Permanently&lt;/title&gt;
+&lt;/head&gt;&lt;body&gt;
+&lt;h1&gt;Moved Permanently&lt;/h1&gt;
+&lt;p&gt;The document has moved &lt;a href=&quot;http://192.168.56.1/ambari/centos6/1.x/updates/1.5.1/&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;
+[root@m1 ~]# curl http://192.168.56.1/hdp/HDP/centos6/2.x/updates/2.1.2.0
+&lt;!DOCTYPE HTML PUBLIC &quot;-//IETF//DTD HTML 2.0//EN&quot;&gt;
+&lt;html&gt;&lt;head&gt;
+&lt;title&gt;301 Moved Permanently&lt;/title&gt;
+&lt;/head&gt;&lt;body&gt;
+&lt;h1&gt;Moved Permanently&lt;/h1&gt;
+&lt;p&gt;The document has moved &lt;a href=&quot;http://192.168.56.1/hdp/HDP/centos6/2.x/updates/2.1.2.0/&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</pre>
+</div></div><p>Then we just need to keep following the instructions at <a class="external-link" href="http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/preparing-the-ambari-repository-configuration-file.html" rel="nofollow">http://docs.hortonworks.com/HDPDocuments/Ambari-1.5.1.0/bk_using_Ambari_book/content/preparing-the-ambari-repository-configuration-file.html</a> to allow Ambari to &quot;see&quot; our newly created local repo when we do an install.  Those steps for me looked like the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">[root@m1 ~]# curl http://192.168.56.1/ambari/centos6/1.x/updates/1.5.1/ambari.repo &gt;&gt; ambari.repo.original
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+108  1086  108  1086    0     0   707k      0 --:--:-- --:--:-- --:--:-- 1060k
+[root@m1 ~]# cp ambari.repo.original ambari.repo
+[root@m1 ~]# vi ambari.repo
+[root@m1 ~]# diff ambari.repo.original ambari.repo
+6c6
+&lt; enabled=1
+---
+&gt; enabled=0
+14c14
+&lt; enabled=1
+---
+&gt; enabled=0
+19c19
+&lt; baseurl=http://public-repo-1.hortonworks.com/ambari/centos6/1.x/updates/1.5.1
+---
+&gt; baseurl=http://192.168.56.1/ambari/centos6/1.x/updates/1.5.1
+27c27
+&lt; baseurl=http://public-repo-1.hortonworks.com/HDP-UTILS-1.1.0.17/repos/centos6
+---
+&gt; baseurl=http://192.168.56.1/hdp/HDP-UTILS-1.1.0.17/repos/centos6
+[root@m1 ~]# cp ambari.repo /etc/yum.repos.d/
+[root@m1 ~]# cd /etc/yum.repos.d/
+[root@m1 yum.repos.d]# ls -l
+total 20
+-rw-r--r--. 1 root root 1056 May  7 07:48 ambari.repo
+-rw-r--r--. 1 root root 1926 Nov 27 06:53 CentOS-Base.repo
+-rw-r--r--. 1 root root  638 Nov 27 06:53 CentOS-Debuginfo.repo
+-rw-r--r--. 1 root root  630 Nov 27 06:53 CentOS-Media.repo
+-rw-r--r--. 1 root root 3664 Nov 27 06:53 CentOS-Vault.repo
+[root@m1 yum.repos.d]# cd /etc/yum/pluginconf.d/
+[root@m1 pluginconf.d]# ls
+fastestmirror.conf
+[root@m1 pluginconf.d]# vi priorities.conf
+[root@m1 pluginconf.d]# cat priorities.conf 
+[main]
+enabled=1
+gpgcheck=0</pre>
+</div></div><p>That should do it!!</p>
+</body>
+</html>

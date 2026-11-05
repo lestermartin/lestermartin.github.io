@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hive delta file compaction (minor and major)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>hive delta file compaction (minor and major)</h1>
+<p class="meta">2019-12-23 &middot; Lester Martin</p>
+<p>This is a quick blog post to show how minor and major compaction for Hive transactional tables occurs.  Let’s use the situation that the <a href="../hive-acid-transactions-with-partitions-a-behind-the-scenes-p-1405059073/hive-acid-transactions-with-partitions-a-behind-the-scenes-p-1405059073.html" data-linked-resource-id="1405059073" data-linked-resource-version="9" data-linked-resource-type="blogpost">hive acid transactions with partitions (a behind the scenes perspective)</a> post leaves us in.  Here it is!</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="ce52fca0-7f8f-4ade-ba52-6ab60e821b89" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:57 /wa/t/m/h/try_it/prt=p1/delete_delta_0000005_0000005_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 07:43 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000001_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p1/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        733 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delete_delta_0000004_0000004_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        788 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000002_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        816 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p2/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:45 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        815 2019-12-12 09:44 /wa/t/m/h/try_it/prt=p2/delta_0000004_0000004_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        727 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delete_delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        796 2019-12-12 08:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000002_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        807 2019-12-12 09:34 /wa/t/m/h/try_it/prt=p3/delta_0000003_0000003_0000/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000/_orc_acid_version
+-rw-rw----+  3 hive hadoop        813 2019-12-12 10:06 /wa/t/m/h/try_it/prt=p3/delta_0000006_0000006_0000/bucket_00000</pre>
+</div></div><p>As that blog post, and the directory listing above, shows, there where a total of six ACID transactions that have occurred across three partitions to get to this point.  The table looks like the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="13b3fbe7-eea8-4499-b13b-4a51a54b4ec3" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 2          | noise         | bogus3        | p2          |
+| 3          | noise         | bogus2        | p3          |
+| 1          | noise         | bogus2        | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.307 seconds)</pre>
+</div></div><p>As <a class="external-link" href="https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties#ConfigurationProperties-Compactor" rel="nofollow">https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties#ConfigurationProperties-Compactor</a> shows, we need to make sure <code>hive.compactor.initiator.on</code> is set to <code>true</code> for the compactor to be run.</p><h1 id="hivedeltafilecompaction(minorandmajor)-MinorCompaction">Minor Compaction</h1><p>This type of compaction is scheduled after the number of delta directories passes the value set in the <code>hive.compactor.delta.num.threshold</code> property, but you can also trigger it to run on-demand.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="2d74ea7b-7e39-44fb-9e14-e1d3ffa76548" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">ALTER TABLE try_it COMPACT 'minor';
+
+ERROR : FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. 
+You must specify a partition to compact for partitioned tables</pre>
+</div></div><p>This error helps us by making the point that we must run compaction on a specific partition unless the table is not partitioned.  Let’s try it again and be sure to wait until it completes!</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a80a9569-6d07-46d5-ae1e-4b26edc3962b" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">ALTER TABLE try_it partition (prt='p1') COMPACT 'minor';
+
+show compactions;
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+| compactionid  |  dbname   | tabname  |  partname  |  type  |   state    | workerid  |   starttime    |   duration    |       hadoopjobid       |
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+| CompactionId  | Database  | Table    | Partition  | Type   | State      | Worker    | Start Time     | Duration(ms)  | HadoopJobId             |
+| 1             | default   | try_it   | prt=p1     | MINOR  | succeeded  |  ---      | 1576145642000  | 179000        | job_1575915931720_0012  |
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+2 rows selected (0.031 seconds)</pre>
+</div></div><p>Let’s look at the file system again for the p1 partition.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="817acf5c-355b-4003-8d73-f1e981cd6415" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005/_orc_acid_version
+-rw-rw----+  3 hive hadoop        654 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005/_orc_acid_version
+-rw-rw----+  3 hive hadoop        670 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005/bucket_00000</pre>
+</div></div><p>Since there were changes in this partition from transaction #s 1, 3, and 5, we now see rolled together versions of the delta directories spanning these transaction #s.  Let’s verify that the contents of the files have the rolled up details in a single file for the <code>delta</code> and <code>delete_delta</code> transactions.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="110a0318-a554-4ea3-b5b7-c337de5c6f5d" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005/bucket_00000 p1Minor-delete_delta
+$ java -jar orc-tools-1.5.1-uber.jar data p1Minor-delete_delta 
+Processing data file p1Minor-delete_delta [length: 654]
+{&quot;operation&quot;:2,&quot;originalTransaction&quot;:1,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:3,
+&quot;row&quot;:null}
+{&quot;operation&quot;:2,&quot;originalTransaction&quot;:3,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:5,
+&quot;row&quot;:null}
+
+$ hdfs dfs -get /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005/bucket_00000 p1Minor-delta
+$ java -jar orc-tools-1.5.1-uber.jar data p1Minor-delta 
+Processing data file p1Minor-delta [length: 670]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:1,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:1,
+&quot;row&quot;:{&quot;id&quot;:1,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus&quot;}}
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:3,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:3,
+&quot;row&quot;:{&quot;id&quot;:1,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus2&quot;}}</pre>
+</div></div><p>Even though the minor compacted <code>delete_delta</code> file only shows transaction IDs 3 and 5 (see the <code>currentTransaction</code> attributes) and the <code>delta</code> only includes 1 and 3, both of these compacted files show the comprehensive width of <code>0000001_0000005</code>.</p><p>Now, initiate minor compacting for the the other two partitions.  </p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="7ceb3eb5-eca5-4e90-88b1-7acf68a78abd" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">ALTER TABLE try_it partition (prt='p2') COMPACT 'minor';
+ALTER TABLE try_it partition (prt='p3') COMPACT 'minor';
+
+show compactions
+INFO  : Starting task [Stage-0:DDL] in serial mode
+INFO  : Completed executing command(queryId=hive_20191212201440_3a58f8c2-ebc2-4ebe-96e3-a774bf8bec65); Time taken: 0.002 seconds
+INFO  : OK
++---------------+-----------+----------+------------+--------+------------+-------------------------------------------------+----------------+---------------+-------------------------+
+| compactionid  |  dbname   | tabname  |  partname  |  type  |   state    |                    workerid                     |   starttime    |   duration    |       hadoopjobid       |
++---------------+-----------+----------+------------+--------+------------+-------------------------------------------------+----------------+---------------+-------------------------+
+| CompactionId  | Database  | Table    | Partition  | Type   | State      | Worker                                          | Start Time     | Duration(ms)  | HadoopJobId             |
+| 2             | default   | try_it   | prt=p2     | MINOR  | working    | ip-172-30-10-206.us-west-2.compute.internal-37  | 1576181672000  |  ---          | job_1575915931720_0013  |
+| 3             | default   | try_it   | prt=p3     | MINOR  | working    | ip-172-30-10-206.us-west-2.compute.internal-36  | 1576181677000  |  ---          | job_1575915931720_0014  |
+| 1             | default   | try_it   | prt=p1     | MINOR  | succeeded  |  ---                                            | 1576145642000  | 179000        | job_1575915931720_0012  |
++---------------+-----------+----------+------------+--------+------------+-------------------------------------------------+----------------+---------------+-------------------------+
+4 rows selected (0.03 seconds)</pre>
+</div></div><p>Once those two compacting process finish, the table’s underlying filesystem footprint should look like the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="c883d7ee-9d93-4624-82d6-105cbb8c1b8c" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:17 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005/_orc_acid_version
+-rw-rw----+  3 hive hadoop        654 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delete_delta_0000001_0000005/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005
+-rw-rw----+  3 hive hadoop          1 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005/_orc_acid_version
+-rw-rw----+  3 hive hadoop        670 2019-12-12 10:16 /wa/t/m/h/try_it/prt=p1/delta_0000001_0000005/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delete_delta_0000002_0000004
+-rw-rw----+  3 hive hadoop          1 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delete_delta_0000002_0000004/_orc_acid_version
+-rw-rw----+  3 hive hadoop        654 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delete_delta_0000002_0000004/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000004
+-rw-rw----+  3 hive hadoop          1 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000004/_orc_acid_version
+-rw-rw----+  3 hive hadoop        670 2019-12-12 20:14 /wa/t/m/h/try_it/prt=p2/delta_0000002_0000004/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delete_delta_0000002_0000006
+-rw-rw----+  3 hive hadoop          1 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delete_delta_0000002_0000006/_orc_acid_version
+-rw-rw----+  3 hive hadoop        650 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delete_delta_0000002_0000006/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000006
+-rw-rw----+  3 hive hadoop          1 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000006/_orc_acid_version
+-rw-rw----+  3 hive hadoop        678 2019-12-12 20:15 /wa/t/m/h/try_it/prt=p3/delta_0000002_0000006/bucket_00000</pre>
+</div></div><h1 id="hivedeltafilecompaction(minorandmajor)-MajorCompaction">Major Compaction</h1><p>This type of compaction is scheduled based on the value set in the <code>hive.compactor.delta.pct.threshold</code> property whose formal definition expresses it best.</p><p><em>Percentage (fractional) size of the delta files relative to the base that will trigger a major compaction. (1.0 = 100%, so the default 0.1 = 10%.)</em></p><p>And, of course, you can also trigger it to run on-demand as shown below; again, let these processes finish before checking again.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="5dbb9959-cce2-4de6-944c-1827ef4420ce" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">ALTER TABLE try_it partition (prt='p1') COMPACT 'major';
+ALTER TABLE try_it partition (prt='p2') COMPACT 'major';
+ALTER TABLE try_it partition (prt='p3') COMPACT 'major';
+
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+| compactionid  |  dbname   | tabname  |  partname  |  type  |   state    | workerid  |   starttime    |   duration    |       hadoopjobid       |
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+| CompactionId  | Database  | Table    | Partition  | Type   | State      | Worker    | Start Time     | Duration(ms)  | HadoopJobId             |
+| 1             | default   | try_it   | prt=p1     | MINOR  | succeeded  |  ---      | 1576145642000  | 179000        | job_1575915931720_0012  |
+| 2             | default   | try_it   | prt=p2     | MINOR  | succeeded  |  ---      | 1576181672000  | 22000         | job_1575915931720_0013  |
+| 3             | default   | try_it   | prt=p3     | MINOR  | succeeded  |  ---      | 1576181677000  | 37000         | job_1575915931720_0014  |
+| 4             | default   | try_it   | prt=p1     | MAJOR  | succeeded  |  ---      | 1576183603000  | 31000         | job_1575915931720_0015  |
+| 5             | default   | try_it   | prt=p2     | MAJOR  | succeeded  |  ---      | 1576187575000  | 50000         | job_1575915931720_0017  |
+| 6             | default   | try_it   | prt=p3     | MAJOR  | succeeded  |  ---      | 1576187583000  | 57000         | job_1575915931720_0018  |
++---------------+-----------+----------+------------+--------+------------+-----------+----------------+---------------+-------------------------+
+7 rows selected (0.029 seconds)</pre>
+</div></div><p>This will build a single “base” file for each partition.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="7c29eade-f8ce-4a76-9fb4-93aca508b491" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -ls -R /wa/t/m/h/try_it
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:47 /wa/t/m/h/try_it/prt=p1
+drwxrwx---+  - hive hadoop          0 2019-12-12 20:46 /wa/t/m/h/try_it/prt=p1/base_0000005
+-rw-rw----+  3 hive hadoop         48 2019-12-12 20:46 /wa/t/m/h/try_it/prt=p1/base_0000005/_metadata_acid
+-rw-rw----+  3 hive hadoop          1 2019-12-12 20:46 /wa/t/m/h/try_it/prt=p1/base_0000005/_orc_acid_version
+-rw-rw----+  3 hive hadoop        228 2019-12-12 20:46 /wa/t/m/h/try_it/prt=p1/base_0000005/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p2
+drwxrwx---+  - hive hadoop          0 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p2/base_0000004
+-rw-rw----+  3 hive hadoop         48 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p2/base_0000004/_metadata_acid
+-rw-rw----+  3 hive hadoop          1 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p2/base_0000004/_orc_acid_version
+-rw-rw----+  3 hive hadoop        815 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p2/base_0000004/bucket_00000
+drwxrwx---+  - hive hadoop          0 2019-12-12 21:54 /wa/t/m/h/try_it/prt=p3
+drwxrwx---+  - hive hadoop          0 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p3/base_0000006
+-rw-rw----+  3 hive hadoop         48 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p3/base_0000006/_metadata_acid
+-rw-rw----+  3 hive hadoop          1 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p3/base_0000006/_orc_acid_version
+-rw-rw----+  3 hive hadoop        835 2019-12-12 21:53 /wa/t/m/h/try_it/prt=p3/base_0000006/bucket_00000</pre>
+</div></div><p>Looking at p1’s data we make sure there is no data for this partition.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a10f5dc3-cbae-43dd-8ac6-f5d4bb0aed03" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get /wa/t/m/h/try_it/prt=p1/base_0000005/bucket_00000 p1Base
+$ java -jar orc-tools-1.5.1-uber.jar data p1Base 
+Processing data file p1Base [length: 228]</pre>
+</div></div><p>We can see that p2 has a single row.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="33c6d005-3155-4de1-9886-81b8256c2862" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get /wa/t/m/h/try_it/prt=p2/base_0000004/bucket_00000 p2Base
+$ java -jar orc-tools-1.5.1-uber.jar data p2Base 
+Processing data file p2Base [length: 815]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:4,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:4,
+&quot;row&quot;:{&quot;id&quot;:2,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus3&quot;}}</pre>
+</div></div><p>And lastly, we verify that p3’s data contains two rows.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="a0cc6875-8a8c-4443-bbac-1b37c296782f" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">$ hdfs dfs -get /wa/t/m/h/try_it/prt=p3/base_0000006/bucket_00000 p3Base
+$ java -jar orc-tools-1.5.1-uber.jar data p3Base 
+Processing data file p3Base [length: 835]
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:3,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:3,
+&quot;row&quot;:{&quot;id&quot;:3,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus2&quot;}}
+{&quot;operation&quot;:0,&quot;originalTransaction&quot;:6,&quot;bucket&quot;:536870912,&quot;rowId&quot;:0,&quot;currentTransaction&quot;:6,
+&quot;row&quot;:{&quot;id&quot;:1,&quot;a_val&quot;:&quot;noise&quot;,&quot;b_val&quot;:&quot;bogus2&quot;}}</pre>
+</div></div><p>Again, the contents of the now fully compacted into <code>base</code> files table looks like the following.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="60caa676-e482-4c72-8f23-b6ea0f70b1cd" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: sql; gutter: false; theme: Confluence" data-theme="Confluence">select * from try_it;
++------------+---------------+---------------+-------------+
+| try_it.id  | try_it.a_val  | try_it.b_val  | try_it.prt  |
++------------+---------------+---------------+-------------+
+| 2          | noise         | bogus3        | p2          |
+| 3          | noise         | bogus2        | p3          |
+| 1          | noise         | bogus2        | p3          |
++------------+---------------+---------------+-------------+
+3 rows selected (0.307 seconds)</pre>
+</div></div><p />
+</body>
+</html>

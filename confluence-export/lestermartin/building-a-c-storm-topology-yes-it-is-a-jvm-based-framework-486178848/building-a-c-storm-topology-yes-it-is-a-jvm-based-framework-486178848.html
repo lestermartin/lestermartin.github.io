@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>building a c# storm topology (yes, it is a jvm-based framework)</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:50rem;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+img{max-width:100%;height:auto}
+pre,code{background:#f4f5f7;border-radius:3px}
+pre{padding:.75rem;overflow:auto}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.4rem}
+.meta{color:#666;font-size:.9rem}
+nav a{font-size:.9rem}
+</style>
+</head>
+<body>
+<nav><a href="../index.html">&larr; Index</a></nav>
+<h1>building a c# storm topology (yes, it is a jvm-based framework)</h1>
+<p class="meta">2018-06-23 &middot; Lester Martin</p>
+<p>Well… it looks like I have not published a single professional blog posting all year, so hopefully this will jumpstart my efforts.  And, of course, I’m behind the eight ball on this one!  It is the Saturday before the Monday night user group presentation I committed a long time ago to present at, <a class="external-link" href="https://www.meetup.com/Atlanta-Net-User-Group/events/244527107/" rel="nofollow">https://www.meetup.com/Atlanta-Net-User-Group/events/244527107/</a>, and I’m FINALLY getting around to fully testing this all out.  <strong>Guess I need to read <a class="external-link" href="https://smile.amazon.com/Getting-Things-Done-Stress-Free-Productivity-ebook/dp/B00KWG9M2E/ref=sr_1_2?ie=UTF8&amp;qid=1529764838" rel="nofollow">Getting Things Done</a> again!</strong></p><p><em>Yes, you read that right!  </em>I’m going to talk about and demonstrate developing, building, and deploying Storm topologies written in C#, <em>not in Java</em>.  </p><p>If interested in that more mainstream approach take a peek at my YouTube video on that topic, <a class="external-link" href="https://www.youtube.com/watch?v=qePLLergwVM" rel="nofollow">https://www.youtube.com/watch?v=qePLLergwVM</a>, as well as the Microsoft post at <a class="external-link" href="https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-develop-java-topology" rel="nofollow">https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-develop-java-topology</a> for how to do this with Visual Studio (VS).</p><p>That aside, let’s get some C# topologies running on Storm!!</p><div class="toc-macro client-side-toc-macro  conf-macro output-block" data-hasbody="false" data-headerelements="H1,H2,H3,H4,H5,H6,H7" data-layout="default" data-macro-id="245fafda-3fbf-4d47-b815-64f701d14dd5" data-macro-name="toc"> </div><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-ProvisionStormCluster">Provision Storm Cluster</h1><p>Since I’m talking Microsoft, I decided it was best I run a HDInsight’s based Storm cluster.  I used the instructions documented at <a class="external-link" href="https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-tutorial-get-started-linux" rel="nofollow">https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-tutorial-get-started-linux</a> to spin up the cluster.  Thankfully, the estimate came in a bit cheaper than on that web page, but it is still expensive. </p><span class="confluence-embedded-file-wrapper image-left-wrapper"><img class="confluence-embedded-image image-left" loading="lazy" src="costs.png" data-height="168" data-width="702" data-unresolved-comment-count="0" data-linked-resource-id="486342671" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="9be17750-e220-4170-af77-7f2f4c84ba96" data-media-type="file"></span><p>Regarding this cost, <em>and as clearly documented in the setup instructions</em>, the problem with the HDInsight cluster for testing like this is that you cannot stop the meter.  Yes, you can stop the machines that the cluster is running on, but that doesn't stop the charge clock, so you have to tear it all down when you want to stop being charged.</p><p>Fortunately, it is easy to spin up a new one.  Creating my second cluster took 10 mouse clicks, filling out two textboxes (cluster name and ssh user's password), and less than four minutes of time.  The actual provisioning of the cluster took a bit less than 20 minutes and for those familiar with Hortonworks, you’ll feel right at home once it is all created.</p><div class="table-wrap"><table data-layout="default" class="confluenceTable"><colgroup><col/><col/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>Ambari UI</strong></p></th><th class="confluenceTh"><p><strong>Storm UI</strong></p></th></tr><tr><td class="confluenceTd"><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="ambariUI.png" data-height="1408" data-width="2430" data-unresolved-comment-count="0" data-linked-resource-id="486637593" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="0a5c744d-6892-4724-b2fe-7429d8f7de2a" data-media-type="file"></span></td><td class="confluenceTd"><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="stormUI.png" data-height="1404" data-width="2430" data-unresolved-comment-count="0" data-linked-resource-id="486473748" data-linked-resource-version="2" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="2eb26ffb-c88c-419b-b8a1-9333302488b8" data-media-type="file"></span><p /></td></tr></tbody></table></div><p>The HDInsights setup instructions show you how to deploy a pre-built WordCount topology and to stop it once you have finished exploring a bit as highlighted below.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="f1063690-f853-4b3d-8097-f6242f76f5fb" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: bash; gutter: false; theme: Confluence" data-theme="Confluence">HW13005:~ lmartin$ ssh sshuser@myhdinsight-ssh.azurehdinsight.net
+sshuser@hn0-myhdin:~$ storm jar /usr/hdp/current/storm-client/contrib/storm-starter/storm-starter-topologies-*.jar org.apache.storm.starter.WordCountTopology wordcount
+32492 [main] INFO  o.a.s.StormSubmitter - Finished submitting topology: wordcount
+sshuser@hn0-myhdin:~$ storm list
+Topology_name        Status     Num_tasks  Num_workers  Uptime_secs
+-------------------------------------------------------------------
+wordcount            ACTIVE     29         3            634       
+sshuser@hn0-myhdin:~$ storm kill wordcount
+6116 [main] INFO  o.a.s.c.kill-topology - Killed topology: wordcount
+sshuser@hn0-myhdin:~$ </pre>
+</div></div><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-CreateDevelopmentEnvironment">Create Development Environment</h1><p>For a dev environment, I used <a class="external-link" href="https://buildazure.com/2017/03/07/visual-studio-2017-development-using-a-vm-in-azure" rel="nofollow">https://buildazure.com/2017/03/07/visual-studio-2017-development-using-a-vm-in-azure/</a> as my setup guide and Microsoft Remote Desktop to access the VM from my Mac.  I was reminded to fully stop (from the Azure portal) the VM as described in <a class="external-link" href="https://buildazure.com/2017/03/16/properly-shutdown-azure-vm-to-save-money" rel="nofollow">https://buildazure.com/2017/03/16/properly-shutdown-azure-vm-to-save-money/</a>.  Fortunately, and unlike the cluster, I do not need to tear it all down while not running to limit my cloud expenses.</p><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-DeployTopologyfromVS">Deploy Topology from VS</h1><p>For this initial deploy effort, I used the instructions at <a class="external-link" href="https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-deploy-monitor-topology#hdinsight-tools-for-visual-studio" rel="nofollow">https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-deploy-monitor-topology#hdinsight-tools-for-visual-studio</a> to setup the bundled StormSample (a WordCount) topology.</p><div class="confluence-information-macro confluence-information-macro-information conf-macro output-block" data-hasbody="true" data-macro-id="d031f30b-87c0-4512-a31a-232a2bb1889b" data-macro-name="info"><span class="aui-icon aui-icon-small aui-iconfont-info confluence-information-macro-icon"> </span><div class="confluence-information-macro-body"><p>If not familiar with WordCount, please take a look at <a href="../hadoop-streaming-with-net-map-reduce-api-executing-on-hdp-fo-27328520/hadoop-streaming-with-net-map-reduce-api-executing-on-hdp-fo-27328520.html" rel="nofollow">hadoop streaming with .net map reduce api (executing on hdp for windows)</a> which coincidentally was one of the demos when I delivered my <a href="../hadoop-demystified-presentation-with-atlanta-s-net-user-grou-27328533/hadoop-demystified-presentation-with-atlanta-s-net-user-grou-27328533.html" rel="nofollow">hadoop demystified presentation (with atlanta's .net user group)</a> four years ago.  </p></div></div><p>The deployment straight from VS was incredibly simple; just a simple right-click on the project and I was off to the races.</p><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="submitNatively.png" data-height="342" data-width="908" data-unresolved-comment-count="0" data-linked-resource-id="486277166" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="5fc1768e-dbc8-47a9-855b-dcdabf001e94" data-media-type="file"></span><p>That prompted me with the Storm cluster I already deployed on Azure.</p><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="submitNatively2.png" data-height="382" data-width="1094" data-unresolved-comment-count="0" data-linked-resource-id="486277174" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="a34e167d-41a6-4553-bcbd-12206666fde4" data-media-type="file"></span><p>Within a minute or so, I noticed down in the Output window that it was deployed.</p><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="submitNatively3.png" data-height="230" data-width="2116" data-unresolved-comment-count="0" data-linked-resource-id="486637619" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="ffd1cb03-6906-4487-af63-66802de9fe37" data-media-type="file"></span><p>I also noticed a new Storm Topologies View tab surfaced in VS where I could see the running topology along with the details I usually find in the native Storm UI including component statistics as well as topology level lifecycle events.</p><span class="confluence-embedded-file-wrapper image-center-wrapper"><img class="confluence-embedded-image image-center" loading="lazy" src="submitNatively4.png" data-height="1190" data-width="2040" data-unresolved-comment-count="0" data-linked-resource-id="486277184" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-content-type="image/png" data-linked-resource-container-id="486178848" data-linked-resource-container-version="18" data-media-id="088c38f8-63aa-47a7-a5d5-a3fffe1d1fd3" data-media-type="file"></span><p><strong>This was very nice!</strong></p><p>While the direct-from-IDE option is nice, it is probably not what would happen in a real-world model.  So, I did dabble around a while to see if I could use the zip generated as part of this visual deploy process to be used with the CLI storm jar command, but no-joy!  This is an area that will need additional research on my part and, of course, if someone already knows how to do this please let me know in the comments section.</p><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-CodeWalkthrough">Code Walkthrough</h1><p>While that bundled example was presenting WordCount, it also brought in a number of additional thoughts that did not make it the cleanest example that it could be.  To help with that I added posted this example below to <a class="external-link" href="https://github.com/lestermartin/streaming-exploration/tree/master/dotnet-projects/SimplestWordCount" rel="nofollow">https://github.com/lestermartin/streaming-exploration/tree/master/dotnet-projects/SimplestWordCount</a>.  I found <a class="external-link" href="https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-develop-csharp-visual-studio-topology" rel="nofollow">https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-develop-csharp-visual-studio-topology</a> to be a good resource in this exercise as well.</p><h2 id="buildingac#stormtopology(yes,itisajvm-basedframework)-SentenceSpout">Sentence Spout</h2><p>This spout randomly generates a sentence when its <code>nextTuple()</code> method is called.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="3f746533-d171-4bca-9d36-2084832d5927" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">    public class SentenceSpout : ISCPSpout
+    {
+        private Context ctx;
+        private Random rand = new Random();
+        string[] sentences = new string[] {
+                                          &quot;the cow jumped over the moon&quot;,
+                                          &quot;an apple a day keeps the doctor away&quot;,
+                                          &quot;four score and seven years ago&quot;,
+                                          &quot;snow white and the seven dwarfs&quot;,
+                                          &quot;i am at two with nature&quot;};
+
+        public SentenceSpout(Context ctx)
+        {
+            this.ctx = ctx;
+            
+            // identify that a 1-tuple of type string (a sentence) will be emitted
+            Dictionary&lt;string, List&lt;Type&gt;&gt; outputSchema = new Dictionary&lt;string, List&lt;Type&gt;&gt;();
+            outputSchema.Add(Constants.DEFAULT_STREAM_ID, new List&lt;Type&gt;() { typeof(string) });
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(null, outputSchema));
+        }
+
+        public void NextTuple(Dictionary&lt;string, Object&gt; parms)
+        {
+            Context.Logger.Info(&quot;NextTuple enter&quot;);
+
+            // select one of the random sentences
+            string sentence = sentences[rand.Next(0, sentences.Length - 1)];
+            // log info message of selected sentence
+            Context.Logger.Info(&quot;Emit: {0}&quot;, sentence);
+
+            // raise this 1-tuple into the stream
+            ctx.Emit(Constants.DEFAULT_STREAM_ID, new Values(sentence));
+
+            Context.Logger.Info(&quot;NextTuple exit&quot;);
+        }
+    }</pre>
+</div></div><p>Here is the output from the running topology.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="07722593-ccca-4ebe-974b-d434a3248ab0" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">SimplestWordCount_SentenceSpout - NextTuple enter
+SimplestWordCount_SentenceSpout - Emit: snow white and the seven dwarfs
+SimplestWordCount_SentenceSpout - NextTuple exit</pre>
+</div></div><h2 id="buildingac#stormtopology(yes,itisajvm-basedframework)-SplitterBolt">Splitter Bolt</h2><p>This bolt breaks the sentences apart into words and emits those via its output stream.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="0ea69338-7d6a-4aeb-a25f-1610cd2a4f6a" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">    public class SplitterBolt : ISCPBolt
+    {
+        private Context ctx;
+
+        public SplitterBolt(Context ctx)
+        {
+            this.ctx = ctx;
+
+            // declare that a 1-tuple (a sentence) will be processed
+            Dictionary&lt;string, List&lt;Type&gt;&gt; inputSchema = new Dictionary&lt;string, List&lt;Type&gt;&gt;();
+            inputSchema.Add(Constants.DEFAULT_STREAM_ID, new List&lt;Type&gt;() { typeof(string) });
+
+            // identify that a 1-tuple (a word) will be emitted
+            Dictionary&lt;string, List&lt;Type&gt;&gt; outputSchema = new Dictionary&lt;string, List&lt;Type&gt;&gt;();
+            outputSchema.Add(Constants.DEFAULT_STREAM_ID, new List&lt;Type&gt;() { typeof(string) });
+
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(inputSchema, outputSchema));
+        }
+
+        public void Execute(SCPTuple tuple)
+        {
+            Context.Logger.Info(&quot;Execute enter&quot;);
+
+            string sentence = tuple.GetString(0); // grab the first (and only field) from the tuple
+            // tokenize it into words
+            foreach (string word in sentence.Split(' '))
+            {
+                // log each word and emit it into the output stream
+                Context.Logger.Info(&quot;Emit: {0}&quot;, word);
+                ctx.Emit(new Values(word));
+            }
+
+            Context.Logger.Info(&quot;Execute exit&quot;);
+        }
+    }</pre>
+</div></div><p>Here is the output from the running topology.  As you can see, each sentence being consumed results in many words being emitted.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="cb17fdab-1fc2-4427-9eb8-d50d69985c1a" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">SimplestWordCount_SplitterBolt - Execute enter
+SimplestWordCount_SplitterBolt - Emit: snow
+SimplestWordCount_SplitterBolt - Emit: white
+SimplestWordCount_SplitterBolt - Emit: and
+SimplestWordCount_SplitterBolt - Emit: the
+SimplestWordCount_SplitterBolt - Emit: seven
+SimplestWordCount_SplitterBolt - Emit: dwarfs
+SimplestWordCount_SplitterBolt - Execute exit</pre>
+</div></div><h2 id="buildingac#stormtopology(yes,itisajvm-basedframework)-CounterBolt">Counter Bolt</h2><p>The final bolt maintains state of running total counts for each word.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="240d1769-327d-4cc1-8522-ae531ee5205e" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">    public class CounterBolt : ISCPBolt
+    {
+        private Context ctx;
+
+        // a map to hold the words and their running totals
+        private Dictionary&lt;string, int&gt; counts = new Dictionary&lt;string, int&gt;();
+
+        public CounterBolt(Context ctx)
+        {
+            this.ctx = ctx;
+
+            // declare that a 1-tuple (a word) will be processed
+            Dictionary&lt;string, List&lt;Type&gt;&gt; inputSchema = new Dictionary&lt;string, List&lt;Type&gt;&gt;();
+            inputSchema.Add(Constants.DEFAULT_STREAM_ID, new List&lt;Type&gt;() { typeof(string) });
+
+            // identify that a 2-tuple (a specific word and its running total) will be emitted
+            Dictionary&lt;string, List&lt;Type&gt;&gt; outputSchema = new Dictionary&lt;string, List&lt;Type&gt;&gt;();
+            outputSchema.Add(Constants.DEFAULT_STREAM_ID, new List&lt;Type&gt;() { typeof(string), typeof(int) });
+
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(inputSchema, outputSchema));
+        }
+
+        public void Execute(SCPTuple tuple)
+        {
+            Context.Logger.Info(&quot;Execute enter&quot;);
+
+            string word = tuple.GetString(0); // grab the first (and only field) from the tuple
+
+            // figure out if the word has already been encountered or not
+            int count = counts.ContainsKey(word) ? counts[word] : 0;
+            count++;                // update counter
+            counts[word] = count;   // update the map
+
+            // log the running count for the word and emit those two fields into the output stream
+            Context.Logger.Info(&quot;Emit: {0}, count: {1}&quot;, word, count);
+            this.ctx.Emit(Constants.DEFAULT_STREAM_ID, new List&lt;SCPTuple&gt; { tuple }, new Values(word, count));
+
+            Context.Logger.Info(&quot;Execute exit&quot;);
+        }
+    }</pre>
+</div></div><p>Here is the output from the running topology.  I am just focusing on the output from a single method invocation.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="85b1fee6-fca3-4c3e-a6cf-448ad0dba689" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">SimplestWordCount_CounterBolt - Execute enter
+SimplestWordCount_CounterBolt - Emit: snow, count: 69
+SimplestWordCount_CounterBolt - Execute exit</pre>
+</div></div><h2 id="buildingac#stormtopology(yes,itisajvm-basedframework)-TheDriver">The Driver</h2><p>This class assembles the topology by declaring the components and how they are wired together.</p><div class="code panel pdl conf-macro output-block" data-hasbody="true" data-macro-id="741d8af7-dd9b-4560-b3d0-2867c5e45ffb" data-macro-name="code" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: c#; gutter: false; theme: Confluence" data-theme="Confluence">    class Program : TopologyDescriptor
+    {
+        public ITopologyBuilder GetTopologyBuilder()
+        {
+            // use TopologyBuilder to define topology and define each spout/bolt one by one
+            TopologyBuilder topologyBuilder = new TopologyBuilder(&quot;SimplestWordCount&quot; + DateTime.Now.ToString(&quot;yyyyMMddHHmmss&quot;));
+
+            topologyBuilder.SetSpout(
+                &quot;sentenceSpout&quot;,
+                SentenceSpout.Get,
+                new Dictionary&lt;string, List&lt;string&gt;&gt;()
+                {
+                    // name the 1-tuple's single field as 'sentence'
+                    {Constants.DEFAULT_STREAM_ID, new List&lt;string&gt;(){&quot;sentence&quot;}}
+                },
+                1);  // initial nbr of instances of this spout (same for bolts below)
+
+            topologyBuilder.SetBolt(
+                &quot;splitterBolt&quot;,
+                SplitterBolt.Get,
+                new Dictionary&lt;string, List&lt;string&gt;&gt;()
+                {
+                    // name the 1-tuple's single field as 'word'
+                    {Constants.DEFAULT_STREAM_ID, new List&lt;string&gt;(){&quot;word&quot;}}
+                },
+                // wire it up to the stream from the sentence generator
+                2).shuffleGrouping(&quot;sentenceSpout&quot;);
+
+            topologyBuilder.SetBolt(
+                &quot;counterBolt&quot;,
+                CounterBolt.Get,
+                new Dictionary&lt;string, List&lt;string&gt;&gt;()
+                {
+                    // name the 2-tuple's fields as 'word' and 'count'
+                    {Constants.DEFAULT_STREAM_ID, new List&lt;string&gt;(){&quot;word&quot;, &quot;count&quot;}}
+                },
+                // wire it up to the stream from the sentence splitting bolt
+                3).fieldsGrouping(&quot;splitterBolt&quot;, new List&lt;int&gt;() { 0 }); 
+                   // ^^^^^ make sure every instance of specific word goes to same bolt instance
+
+            return topologyBuilder;
+        }
+    }</pre>
+</div></div><p>As a reminder, this simple WordCount example can be retrieved from <a class="external-link" href="https://github.com/lestermartin/streaming-exploration/tree/master/dotnet-projects/SimplestWordCount" rel="nofollow">https://github.com/lestermartin/streaming-exploration/tree/master/dotnet-projects/SimplestWordCount</a>.</p><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-MeetupArtifacts">Meetup Artifacts</h1><p>In addition to the GitHub resources mentioned above, the presentation I will be using at Monday’s <a class="external-link" href="https://www.meetup.com/Atlanta-Net-User-Group/events/244527107/" rel="nofollow">https://www.meetup.com/Atlanta-Net-User-Group/events/244527107/</a> Meetup is as follows.</p><div class="conf-macro output-block" data-hasbody="false" data-macro-name="viewpdf" data-macro-id="73b559b1-234b-4640-a04f-3b70355a2e8a" data-layout="default"><style>
+    #media-viewer-content_stormwithcsharpintroanddemo_pdf_8540b081-f1c5-4dc4-8d23-e079832543ee {
+        height: 650px;
+        width: 95%;
+        position: relative;
+    }
+
+    /* PGXT-4046: Prevent the header from showing for the PDF macro */
+    .conf-macro .cp-header.cp-header-group {
+        display: none;
+    }
+
+    .cp-spinner .cp-spinner-blades div {
+        background: #333;
+    }
+
+</style>
+
+<div class="office-container">
+                <div id="media-viewer-content_stormwithcsharpintroanddemo_pdf_8540b081-f1c5-4dc4-8d23-e079832543ee" class="media-viewer-content" data-attachment-name="StormWithCSharpIntroAndDemo.pdf" data-filestore-url="https://api.media.atlassian.com/file/f3ff02d2-b8f9-4010-a860-98e8bcb9472b/artifact/document.pdf/binary?token=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI0MmFhM2Y2My1jMTI2LTRjNDItYjhlMS0zMGY3Y2IwZmU1OGMiLCJhY2Nlc3MiOnsidXJuOmZpbGVzdG9yZTpmaWxlOmYzZmYwMmQyLWI4ZjktNDAxMC1hODYwLTk4ZThiY2I5NDcyYiI6WyJyZWFkIl19LCJleHAiOjE3OTM4NDg1NTcsIm5iZiI6MTc5Mzg0NTU1N30.-HT_GdYM0iQ95RIUBYPCJfbE7gEwShGuWut3epcao3Q&amp;client=42aa3f63-c126-4c42-b8e1-30f7cb0fe58c&amp;name=StormWithCSharpIntroAndDemo.pdf" data-preview-url="https://martin.atlassian.net/wiki/pages/viewpageattachments.action?pageId=486178848&amp;preview=%2F486178848%2F490930177%2FStormWithCSharpIntroAndDemo.pdf" data-thumbnail-url="https://api.media.atlassian.com/file/f3ff02d2-b8f9-4010-a860-98e8bcb9472b/image?token=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI0MmFhM2Y2My1jMTI2LTRjNDItYjhlMS0zMGY3Y2IwZmU1OGMiLCJhY2Nlc3MiOnsidXJuOmZpbGVzdG9yZTpmaWxlOmYzZmYwMmQyLWI4ZjktNDAxMC1hODYwLTk4ZThiY2I5NDcyYiI6WyJyZWFkIl19LCJleHAiOjE3OTM4NDg1NTcsIm5iZiI6MTc5Mzg0NTU1NywiaHR0cHM6Ly9pZC5hdGxhc3NpYW4uY29tL2FwcEFjY3JlZGl0ZWQiOmZhbHNlLCJhdXRoVHlwZSI6InVuYXV0aGVudGljYXRlZCJ9.oKy1CJZkarLxxCa3bsNizn-FsGDX0L42wtRv33bWYlg&amp;client=42aa3f63-c126-4c42-b8e1-30f7cb0fe58c&amp;name=StormWithCSharpIntroAndDemo.pdf"></div>
+    </div>
+</div><h1 id="buildingac#stormtopology(yes,itisajvm-basedframework)-NextSteps">Next Steps</h1><p>If interested more about Apache Storm, then I highly recommend the project’s web site at <a class="external-link" href="http://storm.apache.org" rel="nofollow">http://storm.apache.org</a> as a great place to visit.  For Microsoft-specific development, these sites seems to be a great next step for learning more and to go beyond the simple example presented above.</p><ul><li><p><a class="external-link" href="https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-example-topology" rel="nofollow">https://docs.microsoft.com/en-us/azure/hdinsight/storm/apache-storm-example-topology</a></p></li><li><p><a class="external-link" href="https://github.com/Blackmist/csharp-storm-example" rel="nofollow">https://github.com/Blackmist/csharp-storm-example</a></p></li><li><p><a class="external-link" href="https://github.com/hdinsight/hdinsight-storm-examples" rel="nofollow">https://github.com/hdinsight/hdinsight-storm-examples</a></p></li></ul>
+</body>
+</html>
